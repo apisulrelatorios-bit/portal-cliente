@@ -121,16 +121,40 @@
   }
 
   function itensFiltrados() {
-    var termo = $("#busca-itens").value.trim().toLowerCase();
-    var filtro = $("#filtro-itens").value;
+    // Obter filtros do novo componente se disponível
+    var filtrosAtivos = (window.getFiltrosAtivos && window.getFiltrosAtivos()) || { busca: '', filtros: {} };
+    var termo = (filtrosAtivos.busca || "").trim().toLowerCase();
+    var filtrosObj = filtrosAtivos.filtros || {};
+
     var lista2 = itens.filter(function (item) {
       var d = item.dados || {};
-      if (filtro === "ativos" && d.ativo === false) return false;
-      if (filtro === "inativos" && d.ativo !== false) return false;
-      if (filtro === "pendentes" && (!coluna("thumbnail") || !pendente(item))) return false;
+
+      // Filtrar por categoria
+      if (filtrosObj.categoria && filtrosObj.categoria.length > 0 &&
+          filtrosObj.categoria.indexOf("todos") === -1) {
+        if (!d.categoria || filtrosObj.categoria.indexOf(d.categoria) === -1) return false;
+      }
+
+      // Filtrar por tema
+      if (filtrosObj.tema && filtrosObj.tema.length > 0 &&
+          filtrosObj.tema.indexOf("todos") === -1) {
+        if (!d.tema || filtrosObj.tema.indexOf(d.tema) === -1) return false;
+      }
+
+      // Filtrar por tipo de mídia
+      if (filtrosObj.tipo_midia && filtrosObj.tipo_midia.length > 0 &&
+          filtrosObj.tipo_midia.indexOf("todos") === -1) {
+        if (!d.tipo_midia || filtrosObj.tipo_midia.indexOf(d.tipo_midia) === -1) return false;
+      }
+
+      // Filtro por busca
       if (!termo) return true;
-      return colunas.some(function (c) { return textoValor(c, d[c.chave]).toLowerCase().indexOf(termo) !== -1; });
+      return colunas.some(function (c) {
+        return textoValor(c, d[c.chave]).toLowerCase().indexOf(termo) !== -1;
+      });
     });
+
+    // Aplicar ordenação
     if (ordem.chave) {
       var col = ordem.chave === "__atualizado" ? null : coluna(ordem.chave);
       lista2.sort(function (a, b) {
@@ -145,6 +169,11 @@
     }
     return lista2;
   }
+
+  // Função para atualizar tabela quando filtros mudam
+  window.updateTableWithFilters = function() {
+    renderTabela();
+  };
 
   function renderTabela() {
     var cols = colunasTabela();
@@ -658,9 +687,15 @@
 
   function ligarEventos() {
     $("#btn-novo-item").addEventListener("click", function () { abrirItem(null); });
-    $("#busca-itens").addEventListener("input", renderTabela);
-    $("#filtro-itens").addEventListener("change", renderTabela);
-    $("#sel-lista").addEventListener("change", function (e) { carregarLista(e.target.value); });
+
+    // Listeners para o novo componente de filtros (os elementos antigos foram removidos do HTML)
+    // A atualização da tabela é feita via window.updateTableWithFilters() chamada pelo FiltrosModerno
+
+    // Listener para seleção de lista (se houver múltiplas)
+    var selLista = $("#sel-lista");
+    if (selLista) {
+      selLista.addEventListener("change", function (e) { carregarLista(e.target.value); });
+    }
 
     $("#tabela-itens").addEventListener("click", function (e) {
       var ord = e.target.closest("[data-ordenar]");

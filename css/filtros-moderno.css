@@ -1,0 +1,257 @@
+/* Estilos para componente de filtros moderno */
+
+.filtros-container {
+  background: #f5f6f8;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 1px solid #e0e3ea;
+}
+
+.filtros-header {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filtros-header-left {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-width: 300px;
+}
+
+.filtros-toggle {
+  background: white;
+  border: 1px solid #d1d5e0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d3748;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.filtros-toggle:hover {
+  border-color: #cbd5e0;
+  background: #f7fafc;
+}
+
+.filtros-toggle.ativo {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.filtros-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.filtros-busca {
+  position: relative;
+  flex: 1;
+  min-width: 250px;
+}
+
+.filtros-busca input {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  border: 1px solid #d1d5e0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.filtros-busca input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.filtros-busca svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #718096;
+  width: 16px;
+  height: 16px;
+}
+
+.filtros-acoes {
+  display: flex;
+  gap: 8px;
+}
+
+.filtros-limpar {
+  background: white;
+  border: 1px solid #d1d5e0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #2d3748;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.filtros-limpar:hover {
+  background: #f7fafc;
+  border-color: #cbd5e0;
+}
+
+.filtros-aplicar {
+  background: #2563eb;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.filtros-aplicar:hover {
+  background: #1d4ed8;
+}
+
+.filtros-aplicar:active {
+  transform: scale(0.98);
+}
+
+/* Grupo de Filtros */
+.filtros-grupo {
+  margin-bottom: 20px;
+}
+
+.filtros-grupo:last-child {
+  margin-bottom: 0;
+}
+
+.filtros-grupo-titulo {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4a5568;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.filtros-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.filtros-chip {
+  background: white;
+  border: 1px solid #d1d5e0;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: #2d3748;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  user-select: none;
+  font-weight: 500;
+}
+
+.filtros-chip:hover {
+  border-color: #cbd5e0;
+  background: #f7fafc;
+}
+
+.filtros-chip.ativo {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+  font-weight: 600;
+}
+
+.filtros-chip.ativo::before {
+  content: "●";
+  margin-right: 6px;
+  display: inline-block;
+}
+
+/* Estado: filtros ocultos */
+.filtros-container.oculto .filtros-conteudo {
+  display: none;
+}
+
+.filtros-conteudo {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .filtros-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filtros-header-left {
+    flex-direction: column;
+  }
+
+  .filtros-acoes {
+    width: 100%;
+  }
+
+  .filtros-limpar,
+  .filtros-aplicar {
+    flex: 1;
+  }
+
+  .filtros-container {
+    padding: 16px;
+  }
+
+  .filtros-chips {
+    gap: 6px;
+  }
+
+  .filtros-chip {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .filtros-grupo {
+    margin-bottom: 16px;
+  }
+
+  .filtros-chip {
+    flex: 0 1 calc(50% - 3px);
+  }
+
+  .filtros-busca input {
+    font-size: 16px; /* Evita zoom no iOS */
+  }
+}

@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/dashboard.css">
   <link rel="stylesheet" href="css/modulo.css">
   <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/filtros-moderno.css">
   <script>try{if(localStorage.getItem("portalMenuRecolhido")==="1")document.documentElement.classList.add("menu-recolhido")}catch(e){}</script>
 </head>
 <body>
@@ -63,20 +64,14 @@
       </div>
 
       <section class="admin-section" aria-label="Itens da lista">
-        <div class="admin-toolbar">
-          <select id="sel-lista" class="admin-select" aria-label="Lista" hidden></select>
-          <div class="search-input-wrapper">
-            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="search" id="busca-itens" placeholder="Buscar nos itens..." autocomplete="off">
-          </div>
-          <select id="filtro-itens" class="admin-select" aria-label="Filtrar itens">
-            <option value="">Todos os itens</option>
-            <option value="ativos">Só ativos</option>
-            <option value="inativos">Só inativos</option>
-            <option value="pendentes">Thumbnail pendente</option>
-          </select>
+        <!-- Novo componente de filtros moderno -->
+        <div id="filtros-container"></div>
+
+        <!-- Botão novo item (após filtros) -->
+        <div style="margin-bottom: 20px;">
           <button type="button" class="admin-btn admin-btn--primary" id="btn-novo-item">+ Novo item</button>
         </div>
+
         <div class="tabela-wrap" id="tabela-itens" aria-live="polite"><p class="admin-loading">Carregando itens…</p></div>
       </section>
 
@@ -126,6 +121,91 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
   <script src="assets/portal-data.js"></script>
   <script src="assets/app-shell.js"></script>
+  <script src="js/filtros-moderno.js"></script>
   <script src="assets/conteudos.js"></script>
+
+  <!-- Inicializar novo componente de filtros -->
+  <script>
+    (function() {
+      // Aguardar até que o conteudos.js tenha setado a API
+      function aguardarAPI() {
+        if (!window.PortalData || !window.PortalData.conteudos) {
+          setTimeout(aguardarAPI, 50);
+          return;
+        }
+        inicializarFiltrosModerno();
+      }
+      aguardarAPI();
+
+      function inicializarFiltrosModerno() {
+        // Obter as opções de filtro das colunas
+        const colunasDisponíveis = [];
+        const filtrosConfig = {
+          categoria: {
+            titulo: 'Categoria',
+            opcoes: [
+              { valor: 'todos', label: 'Todos' },
+              { valor: 'indicadores', label: 'Indicadores' },
+              { valor: 'documentos', label: 'Documentos' },
+              { valor: 'newsletter', label: 'Newsletter' },
+              { valor: 'treinamentos', label: 'Treinamentos' },
+              { valor: 'report', label: 'Report' },
+              { valor: 'awards', label: 'Awards' }
+            ]
+          },
+          tema: {
+            titulo: 'Tema',
+            opcoes: [
+              { valor: 'todos', label: 'Todos' },
+              { valor: 'operacional', label: 'Operacional' },
+              { valor: 'controle-temperatura', label: 'Controle de Temperatura' },
+              { valor: 'ccr', label: 'CCR' },
+              { valor: 'falta-entrega', label: 'Falta na Entrega' },
+              { valor: 'safety', label: 'Safety' }
+            ]
+          },
+          tipo_midia: {
+            titulo: 'Tipo de Mídia',
+            opcoes: [
+              { valor: 'todos', label: 'Todos' },
+              { valor: 'powerbi', label: 'powerbi' },
+              { valor: 'pdf', label: 'pdf' },
+              { valor: 'infografico', label: 'infografico' },
+              { valor: 'video', label: 'video' },
+              { valor: 'link_externo', label: 'link_externo' }
+            ]
+          }
+        };
+
+        // Criar instância do novo componente
+        window.filtrosModerno = new FiltrosModerno('#filtros-container', {
+          filtros: filtrosConfig,
+          onBusca: function(termo) {
+            if (window.updateTableWithFilters) {
+              window.updateTableWithFilters();
+            }
+          },
+          onFiltros: function(filtrosAtivos) {
+            if (window.updateTableWithFilters) {
+              window.updateTableWithFilters();
+            }
+          },
+          onAplicar: function(resultado) {
+            if (window.filtrosModerno) {
+              window.filtrosModerno.salvarEstado();
+            }
+          }
+        });
+
+        // Expor função para atualizar tabela com novos filtros
+        window.getFiltrosAtivos = function() {
+          if (window.filtrosModerno) {
+            return window.filtrosModerno.obterFiltrosAtivos();
+          }
+          return { busca: '', filtros: {} };
+        };
+      }
+    })();
+  </script>
 </body>
 </html>

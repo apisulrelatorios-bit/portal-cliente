@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia: Upload dos 5 Arquivos de Conteúdo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #0051ba 0%, #003d7f 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        header h1 { font-size: 28px; margin-bottom: 10px; }
+        header p { font-size: 16px; opacity: 0.9; }
+        .content { padding: 40px; }
+        .section {
+            margin-bottom: 40px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 40px;
+        }
+        .section:last-child { border-bottom: none; }
+        h2 {
+            color: #0051ba;
+            font-size: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        h2:before {
+            content: attr(data-step);
+            background: #0051ba;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .files-list {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #0051ba;
+        }
+        .file-item:last-child { margin-bottom: 0; }
+        .file-icon {
+            font-size: 24px;
+            width: 40px;
+            text-align: center;
+        }
+        .file-info { flex: 1; }
+        .file-name { font-weight: 600; color: #333; }
+        .file-meta { font-size: 13px; color: #666; }
+        .instructions {
+            background: #e7f3ff;
+            border-left: 4px solid #0051ba;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .instructions li { margin-left: 20px; margin-bottom: 8px; }
+        .instructions strong { color: #0051ba; }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #0051ba;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #003d7f;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 81, 186, 0.3);
+        }
+        .btn-secondary {
+            background: #e9ecef;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+        .completion-checklist {
+            background: #f0f4ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            font-size: 15px;
+        }
+        .checklist-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #28a745;
+            border-radius: 6px;
+            padding: 15px;
+            color: #155724;
+        }
+        .table-files {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .table-files th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            color: #333;
+        }
+        .table-files td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .table-files tr:hover {
+            background: #f8f9fa;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d73a49;
+            font-size: 13px;
+        }
+        .folder-path {
+            background: #f4f4f4;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            color: #333;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📁 Guia de Upload dos Arquivos de Conteúdo</h1>
+            <p>Complete a migração com 5 arquivos que já foram processados</p>
+        </header>
+
+        <div class="content">
+            <!-- Seção: Localização dos Arquivos -->
+            <div class="section">
+                <h2 data-step="1">Localize os Arquivos</h2>
+
+                <div class="warning">
+                    ⚠️ Os 5 arquivos estão salvos nesta pasta:
+                </div>
+
+                <div class="folder-path">
+C:\Users\Everton Leal\AppData\Local\Temp\claude\C--Users-Everton-Leal-OneDrive---Grupo-Apisul-Documentos-Sites-Portal-do-Cliente\7fad92d8-c890-4721-a63f-90d9df7209bb\scratchpad\ARQUIVOS_PARA_UPLOAD_MANUAL\
+                </div>
+
+                <h3 style="color: #333; font-size: 16px; margin-top: 20px; margin-bottom: 15px;">Arquivos a Enviar:</h3>
+
+                <table class="table-files">
+                    <thead>
+                        <tr>
+                            <th>Arquivo Local</th>
+                            <th>Item Portal</th>
+                            <th>Tipo</th>
+                            <th>Tamanho</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>workshop-2026-4.pdf</code></td>
+                            <td><strong>Workshop 2026</strong></td>
+                            <td>PDF</td>
+                            <td>5.9 MB</td>
+                        </tr>
+                        <tr>
+                            <td><code>agosto-0-acidentes-1.png</code></td>
+                            <td><strong>Agosto 0 acidentes</strong></td>
+                            <td>PNG</td>
+                            <td>1.9 MB</td>
+                        </tr>
+                        <tr>
+                            <td><code>mês-de-julho-perfeito-2.jpeg</code></td>
+                            <td><strong>Mês de Julho Perfeito</strong></td>
+                            <td>JPEG</td>
+                            <td>433 KB</td>
+                        </tr>
+                        <tr>
+                            <td><code>record-de-meses-perfeitos-3.png</code></td>
+                            <td><strong>Record de meses perfeitos</strong></td>
+                            <td>PNG</td>
+                            <td>1.9 MB</td>
+                        </tr>
+                        <tr>
+                            <td><code>impacto-criminal-no-rj-0.jpeg</code></td>
+                            <td><strong>Impacto Criminal no RJ</strong></td>
+                            <td>JPEG</td>
+                            <td>438 KB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Seção: Acesse o Portal -->
+            <div class="section">
+                <h2 data-step="2">Acesse o Portal de Conteúdos</h2>
+
+                <div class="instructions">
+                    <ol>
+                        <li>Abra: <strong>https://portal-cliente-olive.vercel.app</strong></li>
+                        <li>Clique em <strong>Conteúdos</strong> no menu lateral</li>
+                        <li>Você verá a lista de todos os itens</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Seção: Upload de Cada Arquivo -->
+            <div class="section">
+                <h2 data-step="3">Faça Upload de Cada Arquivo</h2>
+
+                <div class="warning">
+                    💡 Para cada um dos 5 arquivos abaixo, siga os passos:
+                </div>
+
+                <div style="margin-top: 25px;">
+                    <h3 style="color: #333; font-size: 16px; margin-bottom: 15px;">Para cada item:</h3>
+                    <div class="instructions">
+                        <ol>
+                            <li>Encontre o item na lista de conteúdos</li>
+                            <li>Clique no item para abrir o modal de edição</li>
+                            <li>Localize a seção <strong>"Thumbnail (capa do card)"</strong></li>
+                            <li>Clique em <strong>"Substituir por outra imagem"</strong></li>
+                            <li>Clique em <strong>"Escolher arquivo"</strong></li>
+                            <li>Selecione o arquivo correspondente da pasta acima</li>
+                            <li>Clique em <strong>"Salvar"</strong></li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div style="margin-top: 25px; padding: 20px; background: #e8f4fd; border-radius: 8px;">
+                    <h4 style="color: #0051ba; margin-bottom: 15px;">📋 Ordem de Upload Recomendada:</h4>
+                    <div class="file-item" style="border-left-color: #0051ba;">
+                        <div class="file-icon">1️⃣</div>
+                        <div class="file-info">
+                            <div class="file-name">Agosto 0 acidentes</div>
+                            <div class="file-meta">Selecione: agosto-0-acidentes-1.png</div>
+                        </div>
+                    </div>
+                    <div class="file-item" style="border-left-color: #0051ba;">
+                        <div class="file-icon">2️⃣</div>
+                        <div class="file-info">
+                            <div class="file-name">Record de meses perfeitos</div>
+                            <div class="file-meta">Selecione: record-de-meses-perfeitos-3.png</div>
+                        </div>
+                    </div>
+                    <div class="file-item" style="border-left-color: #0051ba;">
+                        <div class="file-icon">3️⃣</div>
+                        <div class="file-info">
+                            <div class="file-name">Mês de Julho Perfeito</div>
+                            <div class="file-meta">Selecione: mês-de-julho-perfeito-2.jpeg</div>
+                        </div>
+                    </div>
+                    <div class="file-item" style="border-left-color: #0051ba;">
+                        <div class="file-icon">4️⃣</div>
+                        <div class="file-info">
+                            <div class="file-name">Impacto Criminal no RJ</div>
+                            <div class="file-meta">Selecione: impacto-criminal-no-rj-0.jpeg</div>
+                        </div>
+                    </div>
+                    <div class="file-item" style="border-left-color: #0051ba;">
+                        <div class="file-icon">5️⃣</div>
+                        <div class="file-info">
+                            <div class="file-name">Workshop 2026</div>
+                            <div class="file-meta">Selecione: workshop-2026-4.pdf</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção: Finalizar -->
+            <div class="section">
+                <h2 data-step="4">Valide a Migração</h2>
+
+                <div class="success">
+                    ✅ Após fazer upload de todos os 5 arquivos:
+                </div>
+
+                <div class="instructions" style="background: #d4edda; border-left-color: #28a745; color: #155724; margin-top: 15px;">
+                    <ol>
+                        <li>Os arquivos estarão no <strong>Supabase Storage</strong></li>
+                        <li>As URLs dos itens serão atualizadas automaticamente</li>
+                        <li>Você verá as novas imagens no portal</li>
+                        <li>A migração estará <strong>100% completa</strong> ✅</li>
+                    </ol>
+                </div>
+
+                <h3 style="color: #333; font-size: 16px; margin: 25px 0 15px 0;">Checklist de Conclusão:</h3>
+                <div class="completion-checklist">
+                    <div class="checklist-item">
+                        <input type="checkbox" id="check1">
+                        <label for="check1">✅ Agosto 0 acidentes enviado</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="check2">
+                        <label for="check2">✅ Record de meses perfeitos enviado</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="check3">
+                        <label for="check3">✅ Mês de Julho Perfeito enviado</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="check4">
+                        <label for="check4">✅ Impacto Criminal no RJ enviado</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="check5">
+                        <label for="check5">✅ Workshop 2026 enviado</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumo -->
+            <div class="section" style="background: #f8f9fa; padding: 25px; margin: 0; border-radius: 8px;">
+                <h3 style="color: #0051ba; font-size: 16px; margin-bottom: 15px;">📊 Resumo da Migração</h3>
+                <div style="display: grid; gap: 15px;">
+                    <div>
+                        <strong>Arquivos Site (Completo):</strong> 13 ✅
+                        <div style="font-size: 13px; color: #666;">Fontes WOFF2 + Logo + Ícone Apisul</div>
+                    </div>
+                    <div>
+                        <strong>Arquivos Conteúdo (Pendente):</strong> 5 (este guia)
+                        <div style="font-size: 13px; color: #666;">Workshop PDF + 4 imagens</div>
+                    </div>
+                    <div>
+                        <strong>Total:</strong> 18/18 arquivos
+                        <div style="font-size: 13px; color: #666;">Após este upload: 100% migrado ✅</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Salvar estado das checkboxes
+        document.querySelectorAll('.checklist-item input').forEach(checkbox => {
+            const key = 'checkbox_' + checkbox.id;
+            if (localStorage.getItem(key)) {
+                checkbox.checked = true;
+            }
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    localStorage.setItem(key, 'true');
+                } else {
+                    localStorage.removeItem(key);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
