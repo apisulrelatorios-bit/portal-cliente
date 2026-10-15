@@ -1,0 +1,50 @@
+# Somente código no repositório: sem imagens, fontes, pacotes ou documentos binários.
+
+# Imagens
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.ico
+*.bmp
+
+# Fontes
+*.woff
+*.woff2
+*.ttf
+*.otf
+*.eot
+
+# Pacotes e documentos
+*.zip
+*.rar
+*.7z
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+
+# Vídeos
+*.mp4
+*.webm
+*.mov
+
+# Ambiente / local
+.env
+.env.*
+node_modules/
+.vercel/
+.claude/settings.local.json
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Dados de clientes e configuração com segredos
+supabase/dados-privados/
+assets/config.local.js
+Power Automate/
