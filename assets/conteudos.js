@@ -26,6 +26,10 @@
   var itens = [];
   var ordem = { chave: null, dir: 1 };
   var editando = null;   /* item em edição (null = novo) */
+  var enviadosNaoSalvos = []; /* arquivos enviados neste formulário e ainda não salvos */
+  var salvou = false;
+  var ACEITA_ARQUIVO = "application/pdf,image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm," +
+    ".ppt,.pptx,.xls,.xlsx,.doc,.docx";
   var thumb = null;      /* estado do thumbnail no formulário aberto */
 
   /* ---------------- utilitários ---------------- */
@@ -211,6 +215,13 @@
         break;
       case "link": case "imagem": case "arquivo":
         controle = '<input id="' + id + '" data-chave="' + esc(c.chave) + '" type="url" placeholder="https://..." value="' + esc(v) + '"' + req + ">";
+        if (c.chave === "url_link" || c.tipo === "arquivo") {
+          /* Cola um link OU envia o arquivo (vai para o Supabase e o link é preenchido). */
+          controle = '<span class="campo-arquivo">' + controle +
+            '<label class="admin-btn" for="up-' + id + '">Enviar arquivo</label>' +
+            '<input type="file" id="up-' + id + '" data-upload-para="' + esc(c.chave) + '" accept="' + ACEITA_ARQUIVO + '" hidden></span>' +
+            '<small class="campo-ajuda" data-ajuda-de="' + esc(c.chave) + '">Cole um link ou envie o arquivo (PDF, imagem, Office ou vídeo, até 50 MB).</small>';
+        }
         break;
       case "sim_nao":
         var marcado = valor === undefined ? c.padrao !== false : valor !== false;
@@ -266,13 +277,52 @@
       .filter(function (c) { return THUMB_KEYS.indexOf(c.chave) === -1 && !c.oculta; })
       .map(function (c) { return campoHTML(c, d[c.chave]); }).join("");
     $all("#item-campos input, #item-campos select").forEach(function (el) {
+      if (el.hasAttribute("data-upload-para")) return;
       el.addEventListener("input", agendarThumb);
       el.addEventListener("change", agendarThumb);
     });
+    $all("#item-campos [data-upload-para]").forEach(function (el) {
+      el.addEventListener("change", enviarArquivoDoCampo);
+    });
+    enviadosNaoSalvos = [];
+    salvou = false;
     iniciarThumb(d);
     $("#dlg-item").showModal();
     var primeiro = $("#item-campos input, #item-campos select, #item-campos textarea");
     if (primeiro) primeiro.focus();
+  }
+
+  /* ---------------- envio de arquivo do conteúdo ---------------- */
+
+  async function enviarArquivoDoCampo(event) {
+    var input = event.target;
+    var arquivo = input.files && input.files[0];
+    input.value = "";
+    if (!arquivo) return;
+    var chave = input.getAttribute("data-upload-para");
+    var alvo = $('[data-chave="' + chave + '"]', $("#item-campos"));
+    var ajuda = $('[data-ajuda-de="' + chave + '"]', $("#item-campos"));
+    if (arquivo.size > 50 * 1024 * 1024) { erroForm("O arquivo tem mais de 50 MB."); return; }
+    erroForm("");
+    var tituloEl = $('[data-chave="titulo"]', $("#item-campos"));
+    if (ajuda) { ajuda.textContent = "Enviando " + arquivo.name + "…"; ajuda.classList.remove("is-erro"); }
+    try {
+      var url = await api.enviarArquivo(tenant.id, arquivo, tituloEl && tituloEl.value.trim() ? tituloEl.value.trim() : null);
+      enviadosNaoSalvos.push(url);
+      alvo.value = url;
+      if (ajuda) ajuda.textContent = "✓ " + arquivo.name + " enviado para o portal.";
+      /* Sugere o tipo de mídia pelo arquivo, se ainda não foi escolhido. */
+      var tipoEl = $('[data-chave="tipo_midia"]', $("#item-campos"));
+      if (tipoEl && !tipoEl.value) {
+        var sugestao = arquivo.type === "application/pdf" ? "pdf" : /^image\//.test(arquivo.type) ? "infografico" :
+          /^video\//.test(arquivo.type) ? "video" : /\.pptx?$/i.test(arquivo.name) ? "ppt" :
+          /\.xlsx?$/i.test(arquivo.name) ? "excel" : /\.docx?$/i.test(arquivo.name) ? "word" : "";
+        if (sugestao && $('option[value="' + sugestao + '"]', tipoEl)) tipoEl.value = sugestao;
+      }
+      avaliarThumb(false);
+    } catch (e) {
+      if (ajuda) { ajuda.textContent = "Não foi possível enviar: " + e.message; ajuda.classList.add("is-erro"); }
+    }
   }
 
   /* ---------------- thumbnail semiautomático ---------------- */
@@ -568,6 +618,11 @@
 
       var antiga = thumb.urlOriginal;
       if (antiga && antiga !== dados.thumbnail) api.apagarThumbnail(antiga).catch(function () {});
+      salvou = true;
+      enviadosNaoSalvos.filter(function (u) { return u !== dados.url_link; }).forEach(function (u) { api.apagarArquivo(u).catch(function () {}); });
+      enviadosNaoSalvos = [];
+      var linkAntigo = editando && editando.dados ? editando.dados.url_link : "";
+      if (linkAntigo && linkAntigo !== dados.url_link && api.ehArquivoDoPortal(linkAntigo)) api.apagarArquivo(linkAntigo).catch(function () {});
       $("#dlg-item").close();
       toast(editando ? "Item atualizado." : "Item criado.", "ok");
       itens = await api.itens(lista.id);
@@ -589,6 +644,7 @@
     try {
       await api.excluir(editando.id);
       if (editando.dados && editando.dados.thumbnail) api.apagarThumbnail(editando.dados.thumbnail).catch(function () {});
+      if (editando.dados && api.ehArquivoDoPortal(editando.dados.url_link)) api.apagarArquivo(editando.dados.url_link).catch(function () {});
       $("#dlg-item").close();
       toast("Item excluído.", "ok");
       itens = await api.itens(lista.id);
@@ -625,6 +681,11 @@
     });
 
     $("#form-item").addEventListener("submit", salvar);
+    $("#dlg-item").addEventListener("close", function () {
+      if (salvou) return;
+      enviadosNaoSalvos.forEach(function (u) { api.apagarArquivo(u).catch(function () {}); });
+      enviadosNaoSalvos = [];
+    });
     $("#btn-excluir-item").addEventListener("click", excluir);
     $("#thumb-arquivo").addEventListener("change", function (e) {
       usarImagemManual(e.target.files && e.target.files[0]);

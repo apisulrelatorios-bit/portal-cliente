@@ -241,3 +241,9 @@
   .item-campos { grid-template-columns: 1fr; }
   .thumb-preview { width: 100%; }
 }
+
+.campo-arquivo { display: flex; gap: 8px; }
+.campo-arquivo input[type="url"] { flex: 1; min-width: 0; }
+.campo-arquivo .admin-btn { white-space: nowrap; }
+.campo-ajuda { font-size: 12px; font-weight: 400; color: var(--muted-400, #7b8ba1); }
+.campo-ajuda.is-erro { color: #b42318; }

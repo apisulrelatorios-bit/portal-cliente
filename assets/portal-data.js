@@ -466,6 +466,8 @@
 
   var THUMB_BUCKET = "thumbnails";
   var THUMB_PREFIXO = SUPABASE_URL + "/storage/v1/object/public/" + THUMB_BUCKET + "/";
+  var ARQ_BUCKET = "arquivos";
+  var ARQ_PREFIXO = SUPABASE_URL + "/storage/v1/object/public/" + ARQ_BUCKET + "/";
 
   var conteudos = {
     listas: function (tenantId) {
@@ -513,6 +515,32 @@
       }));
       return client.storage.from(THUMB_BUCKET).getPublicUrl(caminho).data.publicUrl;
     },
+    /* Envia o arquivo do conteúdo (PDF, infográfico, Office, vídeo) para
+       arquivos/<tenant_id>/ e devolve a URL pública. Imagens são comprimidas
+       (até 2000 px, boa qualidade, para continuarem legíveis). */
+    enviarArquivo: async function (tenantId, arquivo, nomeBase) {
+      var dados = arquivo;
+      if (/^image\/(png|jpeg|webp)$/.test(arquivo.type)) {
+        dados = await comprimirImagem(arquivo, { max: 2000, qualidade: 0.85 });
+      }
+      var tipo = dados.type || arquivo.type || "application/octet-stream";
+      var extOriginal = ((arquivo.name || "").split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      var ext = ({ "image/webp": "webp", "image/jpeg": "jpg", "image/png": "png", "image/gif": "gif", "application/pdf": "pdf" })[tipo] || extOriginal || "bin";
+      var base = String(nomeBase || (arquivo.name || "arquivo").replace(/\.[^.]+$/, "")).toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "arquivo";
+      var caminho = tenantId + "/" + base + "-" + Date.now() + "." + ext;
+      must(await client.storage.from(ARQ_BUCKET).upload(caminho, dados, {
+        cacheControl: "3600", upsert: false, contentType: tipo
+      }));
+      return client.storage.from(ARQ_BUCKET).getPublicUrl(caminho).data.publicUrl;
+    },
+    /* Apaga um arquivo de conteúdo, se ele foi enviado por aqui. */
+    apagarArquivo: async function (url) {
+      if (!url || url.indexOf(ARQ_PREFIXO) !== 0) return;
+      var caminho = decodeURIComponent(url.slice(ARQ_PREFIXO.length).split("?")[0]);
+      await client.storage.from(ARQ_BUCKET).remove([caminho]);
+    },
+    ehArquivoDoPortal: function (url) { return !!url && url.indexOf(ARQ_PREFIXO) === 0; },
     /* Apaga uma capa antiga, se ela foi enviada por aqui (thumbnails do Supabase). */
     apagarThumbnail: async function (url) {
       if (!url || url.indexOf(THUMB_PREFIXO) !== 0) return;
