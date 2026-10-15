@@ -48,3 +48,6 @@ desktop.ini
 supabase/dados-privados/
 assets/config.local.js
 Power Automate/
+
+# Arquivos locais para envio único ao Supabase (não versionar)
+_upload_site/
