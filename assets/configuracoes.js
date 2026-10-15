@@ -103,6 +103,7 @@
       }
       toast("Configurações salvas.", "ok");
       /* Recarrega para o topo e o menu refletirem o novo nome, logo e telas. */
+      window.PortalShell.limparCache();
       setTimeout(function () { window.location.reload(); }, 700);
     } catch (e) {
       if (enviada) cfg.apagarLogo(enviada).catch(function () {});

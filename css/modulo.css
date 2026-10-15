@@ -41,3 +41,42 @@
 @media (prefers-reduced-motion: reduce) {
   .module-tab { transition: none; }
 }
+
+/* ---------- Esqueleto enquanto a sessão carrega ----------
+   Em vez dos textos de exemplo do HTML ("Apisul", "Carregando…"), mostra
+   blocos cinza até o topo/menu (shell-ready) e a página (session-ready) chegarem. */
+@keyframes portal-skeleton { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+html:not(.shell-ready) .client-badge strong,
+html:not(.shell-ready) .client-badge small,
+html:not(.shell-ready) .topbar-user strong,
+html:not(.shell-ready) #client-logo,
+html:not(.shell-ready) #topbar-user-avatar,
+html:not(.session-ready) #module-title,
+html:not(.session-ready) #module-crumb {
+  color: transparent !important;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(150,170,195,.16) 25%, rgba(150,170,195,.34) 50%, rgba(150,170,195,.16) 75%) !important;
+  background-size: 200% 100% !important;
+  animation: portal-skeleton 1.2s ease-in-out infinite;
+}
+html:not(.shell-ready) .client-badge strong,
+html:not(.session-ready) #module-title { display: inline-block; min-width: 160px; }
+html:not(.shell-ready) .client-badge small { display: inline-block; min-width: 190px; margin-bottom: 4px; }
+html:not(.shell-ready) #client-logo > *,
+html:not(.shell-ready) #topbar-user-avatar > * { visibility: hidden; }
+
+/* Menu: esconde os links fixos do HTML e mostra barras até o menu real chegar. */
+html:not(.shell-ready) .nav a { visibility: hidden; }
+html:not(.shell-ready) .nav { position: relative; min-height: 190px; }
+html:not(.shell-ready) .nav::before {
+  content: ""; position: absolute; inset: 4px 14px auto; height: 180px; border-radius: 10px;
+  background: repeating-linear-gradient(to bottom, rgba(255,255,255,.09) 0 36px, transparent 36px 48px);
+  animation: portal-skeleton-pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes portal-skeleton-pulse { from { opacity: .55; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not(.shell-ready) .client-badge strong, html:not(.shell-ready) .nav::before,
+  html:not(.session-ready) #module-title { animation: none; }
+}

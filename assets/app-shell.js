@@ -252,6 +252,7 @@
         localStorage.removeItem(key);
         sessionStorage.removeItem(key);
       });
+      limparCache();
       if (window.PortalData) await window.PortalData.signOut();
       window.location.assign("index.html");
     });
@@ -323,7 +324,7 @@
       document.documentElement.classList.add("page-leaving");
       window.setTimeout(function () {
         window.location.href = href;
-      }, 300);
+      }, 150);
     }
 
     document.addEventListener("click", function (event) {
@@ -355,9 +356,62 @@
     badge.appendChild(link);
   }
 
+  /* ---------- Topo e menu guardados entre páginas (só exibição) ----------
+     Mostra na hora o nome, a logo e o menu da última página visitada,
+     enquanto os dados atualizados chegam do Supabase. A segurança continua
+     toda no banco: o cache só evita a tela "piscando" com texto de exemplo. */
+  var CACHE_PREFIXO = "portalShell:";
+
+  function chaveCache(uid) {
+    var tenantId = window.PortalData.getActiveTenantId() || "";
+    return CACHE_PREFIXO + uid + ":" + (currentPage() === "admin.html" ? "plataforma" : tenantId);
+  }
+
+  function lerCache(uid) {
+    try { return JSON.parse(window.sessionStorage.getItem(chaveCache(uid)) || "null"); } catch (_) { return null; }
+  }
+
+  function salvarCache(uid, data) {
+    try {
+      window.sessionStorage.setItem(chaveCache(uid), JSON.stringify({
+        isAdmin: data.isAdmin, name: data.name, client: data.client, clientLabel: data.clientLabel,
+        clientLogo: data.clientLogo, photo: data.photo, perfil: data.perfil,
+        podeConfigurar: data.podeConfigurar, podeGerenciarUsuarios: data.podeGerenciarUsuarios,
+        tenant: data.tenant ? { id: data.tenant.id } : null,
+        tenants: data.tenants.map(function (t) { return { id: t.id }; }),
+        modulos: data.modulos, telas: data.telas
+      }));
+    } catch (_) {}
+  }
+
+  function limparCache() {
+    try {
+      Object.keys(window.sessionStorage).forEach(function (k) {
+        if (k.indexOf(CACHE_PREFIXO) === 0) window.sessionStorage.removeItem(k);
+      });
+    } catch (_) {}
+  }
+
+  function renderChrome(data) {
+    buildNav(data);
+    populateIdentity(data);
+    addTenantSwitch(data);
+    markActiveNav();
+    document.documentElement.classList.add("shell-ready");
+  }
+
   async function init(options) {
     options = options || {};
     applyExternalBrandAssets();
+
+    /* Topo e menu imediatos a partir do cache da sessão (se houver). */
+    if (window.PortalData) {
+      try {
+        var sessaoLocal = await window.PortalData.getSession();
+        var cache = sessaoLocal && lerCache(sessaoLocal.user.id);
+        if (cache) renderChrome(cache);
+      } catch (_) {}
+    }
 
     if (!window.PortalData) {
       console.error("[Portal] PortalData indisponível — verifique os scripts da página.");
@@ -388,13 +442,27 @@
        identidade do tenant que estiver selecionado. */
     var naPlataforma = currentPage() === "admin.html" || !ctx.tenant;
 
+    /* Itens do cliente e abas do módulo atual chegam juntos (uma rodada). */
     var items = [];
+    var moduloAtual = ctx.tenant && currentPage() === "modulo.html"
+      ? ctx.modulos.filter(function (m) { return m.slug === currentModuleSlug(); })[0]
+      : null;
+    var abasModulo = null;
     if (ctx.tenant && currentPage() !== "admin.html") {
-      try {
-        items = await window.PortalData.loadTenantItems(ctx.tenant.id);
-      } catch (error) {
-        console.error("[Portal] Falha ao carregar os itens do tenant:", error);
-      }
+      var carga = await Promise.all([
+        window.PortalData.loadTenantItems(ctx.tenant.id).catch(function (error) {
+          console.error("[Portal] Falha ao carregar os itens do tenant:", error);
+          return [];
+        }),
+        moduloAtual
+          ? window.PortalData.loadAbas(moduloAtual.id).catch(function (error) {
+              console.error("[Portal] Falha ao carregar o módulo:", error);
+              return null;
+            })
+          : Promise.resolve(null)
+      ]);
+      items = carga[0];
+      abasModulo = carga[1];
     }
 
     state = {
@@ -418,21 +486,16 @@
       itensProcessos: []
     };
 
-    if (ctx.tenant && currentPage() === "modulo.html") {
-      try {
-        state.modulo = await window.PortalData.loadModule(ctx.tenant.id, currentModuleSlug(), items);
-      } catch (error) {
-        console.error("[Portal] Falha ao carregar o módulo:", error);
-      }
+    if (moduloAtual && abasModulo) {
+      state.modulo = window.PortalData.buildModule(moduloAtual, abasModulo, items);
     }
 
     buildNav(state);
     if (!applyModuleAccess(state)) return null;
 
-    populateIdentity(state);
-    addTenantSwitch(state);
+    renderChrome(state);
+    salvarCache(ctx.user.id, state);
     bindLogout();
-    markActiveNav();
     bindMobileMenu();
     bindPageTransitions();
 
@@ -465,6 +528,7 @@
     init: init,
     readSessionData: readSessionData,
     onReady: onReady,
+    limparCache: limparCache,
     moduleHref: moduleHref,
     getPortalItems: function () { return readSessionData().itensPortal; },
     getProcessItems: function () { return readSessionData().itensProcessos; }

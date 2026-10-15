@@ -86,21 +86,33 @@
       .maybeSingle()) || { id: userId, nome: "", is_platform_admin: false };
   }
 
-  /* Tenants que o usuário pode abrir, com o papel dele em cada um.
-     Admin da plataforma vê todos os tenants ativos (o RLS libera). */
-  async function listTenants(profile) {
-    var memberships = must(await client.from("memberships")
+  function queryMemberships(userId) {
+    return client.from("memberships")
       .select("tenant_id, papel, pode_configurar")
-      .eq("user_id", profile.id)
-      .eq("ativo", true));
-    var byTenant = {};
-    memberships.forEach(function (m) { byTenant[m.tenant_id] = m; });
+      .eq("user_id", userId)
+      .eq("ativo", true).then(must);
+  }
 
-    var tenants = must(await client.from("tenants")
+  function queryTenants() {
+    return client.from("tenants")
       .select("id, slug, nome, logo_url, tema, telas")
       .eq("ativo", true)
-      .order("nome"));
+      .order("nome").then(must);
+  }
 
+  function queryModulos(tenantId) {
+    return client.from("modulos")
+      .select("id, slug, nome, icone, ordem")
+      .eq("tenant_id", tenantId)
+      .eq("visivel", true)
+      .order("ordem").then(must);
+  }
+
+  /* Junta tenants + vínculos: só os tenants que o usuário pode abrir, com o
+     papel dele em cada um. Admin da plataforma vê todos (o RLS libera). */
+  function combineTenants(profile, memberships, tenants) {
+    var byTenant = {};
+    memberships.forEach(function (m) { byTenant[m.tenant_id] = m; });
     return tenants
       .filter(function (t) { return profile.is_platform_admin || byTenant[t.id]; })
       .map(function (t) {
@@ -109,6 +121,11 @@
         t.pode_configurar = profile.is_platform_admin || Boolean(m && m.pode_configurar);
         return t;
       });
+  }
+
+  async function listTenants(profile) {
+    var res = await Promise.all([queryMemberships(profile.id), queryTenants()]);
+    return combineTenants(profile, res[0], res[1]);
   }
 
   function getActiveTenantId() { return storageGet(TENANT_KEY); }
@@ -120,21 +137,23 @@
     var session = await getSession();
     if (!session) return { session: null };
 
-    var profile = await loadProfile(session.user.id);
-    var tenants = await listTenants(profile);
+    var uid = session.user.id;
     var stored = getActiveTenantId();
+    /* Uma rodada só: perfil, vínculos, tenants e (palpite) módulos do tenant salvo. */
+    var res = await Promise.all([
+      loadProfile(uid),
+      queryMemberships(uid),
+      queryTenants(),
+      stored ? queryModulos(stored).catch(function () { return null; }) : Promise.resolve(null)
+    ]);
+    var profile = res[0];
+    var tenants = combineTenants(profile, res[1], res[2]);
     var tenant = tenants.filter(function (t) { return t.id === stored; })[0] ||
       (tenants.length === 1 ? tenants[0] : null);
     if (tenant) setActiveTenantId(tenant.id);
 
     var modulos = [];
-    if (tenant) {
-      modulos = must(await client.from("modulos")
-        .select("id, slug, nome, icone, ordem")
-        .eq("tenant_id", tenant.id)
-        .eq("visivel", true)
-        .order("ordem"));
-    }
+    if (tenant) modulos = (tenant.id === stored && res[3]) ? res[3] : await queryModulos(tenant.id);
 
     return {
       session: session,
@@ -151,12 +170,12 @@
   /* Rótulos das opções de escolha, por lista e chave de coluna:
      { lista_id: { chave: { valor: rotulo } } } */
   async function loadOptionLabels(tenantId) {
-    var colunas = must(await client.from("colunas")
-      .select("id, lista_id, chave")
-      .eq("tenant_id", tenantId));
-    var opcoes = must(await client.from("coluna_opcoes")
-      .select("coluna_id, valor, rotulo")
-      .eq("tenant_id", tenantId));
+    var res = await Promise.all([
+      client.from("colunas").select("id, lista_id, chave").eq("tenant_id", tenantId).then(must),
+      client.from("coluna_opcoes").select("coluna_id, valor, rotulo").eq("tenant_id", tenantId).then(must)
+    ]);
+    var colunas = res[0];
+    var opcoes = res[1];
     var colById = {};
     colunas.forEach(function (c) { colById[c.id] = c; });
     var map = {};
@@ -198,10 +217,12 @@
   }
 
   async function loadTenantItems(tenantId) {
-    var rows = must(await client.from("itens")
-      .select("id, lista_id, dados, created_at, updated_at")
-      .eq("tenant_id", tenantId));
-    var labels = await loadOptionLabels(tenantId);
+    var res = await Promise.all([
+      client.from("itens").select("id, lista_id, dados, created_at, updated_at").eq("tenant_id", tenantId).then(must),
+      loadOptionLabels(tenantId)
+    ]);
+    var rows = res[0];
+    var labels = res[1];
     return rows.map(function (row) { return toCardItem(row, labels); });
   }
 
@@ -252,7 +273,37 @@
       });
   }
 
-  /* Módulo com as abas visíveis e os itens de cada aba já filtrados. */
+  /* Abas visíveis de um módulo, com a visão de cada uma (sem itens). */
+  function loadAbas(moduloId) {
+    return client.from("abas")
+      .select("id, nome, ordem, visao:visoes(id, lista_id, config)")
+      .eq("modulo_id", moduloId)
+      .eq("visivel", true)
+      .order("ordem").then(must);
+  }
+
+  /* Monta o módulo: abas + itens de cada aba já filtrados pela visão. */
+  function buildModule(modulo, abas, items) {
+    return {
+      id: modulo.id,
+      slug: modulo.slug,
+      nome: modulo.nome,
+      icone: modulo.icone,
+      abas: abas.map(function (aba) {
+        var visao = aba.visao || {};
+        var config = visao.config || {};
+        return {
+          id: aba.id,
+          nome: aba.nome,
+          agruparPor: (config.agrupar_por || [])[0] || null,
+          exibicao: config.exibicao || "cards",
+          itens: visao.lista_id ? applyView(items, config, visao.lista_id) : []
+        };
+      })
+    };
+  }
+
+  /* Compatível com a chamada antiga: busca o módulo pelo slug. */
   async function loadModule(tenantId, slug, items) {
     var modulo = must(await client.from("modulos")
       .select("id, slug, nome, icone")
@@ -261,25 +312,7 @@
       .eq("visivel", true)
       .maybeSingle());
     if (!modulo) return null;
-
-    var abas = must(await client.from("abas")
-      .select("id, nome, ordem, visao:visoes(id, lista_id, config)")
-      .eq("modulo_id", modulo.id)
-      .eq("visivel", true)
-      .order("ordem"));
-
-    modulo.abas = abas.map(function (aba) {
-      var visao = aba.visao || {};
-      var config = visao.config || {};
-      return {
-        id: aba.id,
-        nome: aba.nome,
-        agruparPor: (config.agrupar_por || [])[0] || null,
-        exibicao: config.exibicao || "cards",
-        itens: visao.lista_id ? applyView(items, config, visao.lista_id) : []
-      };
-    });
-    return modulo;
+    return buildModule(modulo, await loadAbas(modulo.id), items);
   }
 
   /* ---------------- Administração (só Admin; o banco confere) ---------------- */
@@ -400,6 +433,8 @@
     setActiveTenantId: setActiveTenantId,
     loadTenantItems: loadTenantItems,
     loadModule: loadModule,
+    loadAbas: loadAbas,
+    buildModule: buildModule,
     applyView: applyView
   };
 })(window);
