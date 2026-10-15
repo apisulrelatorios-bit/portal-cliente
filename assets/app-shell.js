@@ -405,11 +405,12 @@
     applyExternalBrandAssets();
 
     /* Topo e menu imediatos a partir do cache da sessão (se houver). */
+    var cacheMostrado = null;
     if (window.PortalData) {
       try {
         var sessaoLocal = await window.PortalData.getSession();
         var cache = sessaoLocal && lerCache(sessaoLocal.user.id);
-        if (cache) renderChrome(cache);
+        if (cache) { renderChrome(cache); cacheMostrado = JSON.stringify(cache); }
       } catch (_) {}
     }
 
@@ -490,16 +491,19 @@
       state.modulo = window.PortalData.buildModule(moduloAtual, abasModulo, items);
     }
 
-    buildNav(state);
-    if (!applyModuleAccess(state)) return null;
-
-    renderChrome(state);
+    /* Se o topo/menu mostrados do cache já estão certos, não redesenha
+       (evita o menu e a logo piscarem ao trocar de página). */
     salvarCache(ctx.user.id, state);
+    var mudou = cacheMostrado !== JSON.stringify(lerCache(ctx.user.id));
+    if (mudou) buildNav(state);
+    if (!applyModuleAccess(state)) return null;
+    if (mudou) renderChrome(state);
     bindLogout();
     bindMobileMenu();
     bindPageTransitions();
 
     document.documentElement.classList.add("session-ready");
+    setTimeout(function () { document.documentElement.classList.add("entrada-feita"); }, 400);
     if (typeof options.onReady === "function") options.onReady(state);
     document.dispatchEvent(new CustomEvent("portal:ready", { detail: state }));
     return state;
