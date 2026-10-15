@@ -63,12 +63,15 @@
     };
   }
 
+  var LOGO_APISUL = "https://repositorio-apisul.github.io/mondelez/icone-apisul.png";
+
   var ICONES_MODULO = {
     shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.6 3.2 8.4 8 9 4.8-.6 8-4.4 8-9V6l-8-3Z"/><path d="m9.5 12 2 2 3.5-3.5"/></svg>',
     truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v8H3z"/><path d="M14 10h4l3 3v2h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>',
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1v-9"/></svg>',
     file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>',
     cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>',
+    sliders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>'
   };
 
@@ -100,11 +103,17 @@
   }
 
   /* Monta o menu lateral: Visão geral + módulos do tenant + Sinistros
-     (+ Administração para o Admin da plataforma). */
+     (+ Configurações para quem pode configurar o tenant)
+     (+ Administração para o Admin da plataforma).
+     Na própria Administração o menu mostra só a plataforma. */
   function buildNav(data) {
     var nav = document.querySelector(".nav");
     if (!nav) return;
     var html = "";
+    if (currentPage() === "admin.html") {
+      nav.innerHTML = '<a class="nav-admin" href="admin.html">' + ICONES_MODULO.cog + '<span>Administração</span></a>';
+      return;
+    }
     if (data.tenant && data.telas.dashboard !== false) {
       html += '<a href="dashboard.html">' + ICONES_MODULO.home + '<span>Visão geral</span></a>';
     }
@@ -113,6 +122,9 @@
     });
     if (data.tenant && data.telas.sinistros !== false) {
       html += '<a data-module="sinistros" href="sinistros.html">' + ICONES_MODULO.file + '<span>Portal de Sinistros</span></a>';
+    }
+    if (data.tenant && data.podeConfigurar) {
+      html += '<a href="configuracoes.html">' + ICONES_MODULO.sliders + '<span>Configurações</span></a>';
     }
     if (data.isAdmin) {
       html += '<a class="nav-admin" href="admin.html">' + ICONES_MODULO.cog + '<span>Administração</span></a>';
@@ -127,6 +139,7 @@
     var slugs = data.modulos.map(function (m) { return m.slug; });
     var bloqueada =
       (page === "admin.html" && !data.isAdmin) ||
+      (page === "configuracoes.html" && !data.podeConfigurar) ||
       (page !== "admin.html" && !data.tenant) ||
       (page === "dashboard.html" && data.telas.dashboard === false) ||
       (page === "sinistros.html" && data.telas.sinistros === false) ||
@@ -190,6 +203,8 @@
   }
 
   function populateIdentity(data) {
+    var label = document.querySelector(".client-badge small");
+    if (label && data.clientLabel) label.textContent = data.clientLabel;
     setText("topbar-user-name", data.name);
     setText("client-name", data.client);
     setText("sidebar-client-name", data.client);
@@ -289,7 +304,7 @@
     var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
 
-    var internalPages = ["dashboard.html", "modulo.html", "sinistros.html", "admin.html", "gr.html", "gl.html"];
+    var internalPages = ["dashboard.html", "modulo.html", "sinistros.html", "admin.html", "configuracoes.html", "gr.html", "gl.html"];
     var current = (currentPage() + window.location.search).toLowerCase();
 
     function isInternal(href) {
@@ -325,7 +340,7 @@
 
   /* Troca de cliente para quem tem acesso a mais de um tenant. */
   function addTenantSwitch(data) {
-    if (data.tenants.length < 2) return;
+    if (data.tenants.length < 2 || currentPage() === "admin.html") return;
     var badge = document.querySelector(".client-badge");
     if (!badge || badge.querySelector(".tenant-switch")) return;
     var link = document.createElement("a");
@@ -364,6 +379,10 @@
       return null;
     }
 
+    /* A Administração é da plataforma, não de um cliente: não mostra a
+       identidade do tenant que estiver selecionado. */
+    var naPlataforma = currentPage() === "admin.html" || !ctx.tenant;
+
     var items = [];
     if (ctx.tenant && currentPage() !== "admin.html") {
       try {
@@ -378,8 +397,9 @@
       isAdmin: isAdmin,
       profile: ctx.profile,
       name: ctx.profile.nome || ctx.profile.username || ctx.user.email || "Usuário",
-      client: ctx.tenant ? ctx.tenant.nome : "Administração",
-      clientLogo: ctx.tenant ? resolveUrl(ctx.tenant.logo_url || "") : "",
+      client: naPlataforma ? "Grupo Apisul" : ctx.tenant.nome,
+      clientLabel: naPlataforma ? "Administração da plataforma" : "Portal de Gestão & Performance",
+      clientLogo: naPlataforma ? LOGO_APISUL : resolveUrl(ctx.tenant.logo_url || ""),
       photo: ctx.profile.foto_url || "",
       perfil: ctx.tenant ? ctx.tenant.papel : (isAdmin ? "admin" : ""),
       podeConfigurar: ctx.tenant ? ctx.tenant.pode_configurar : isAdmin,

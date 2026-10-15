@@ -151,6 +151,10 @@
     }).join("");
   }
 
+  function tenantPorId(id) {
+    return dados.tenants.filter(function (t) { return t.id === id; })[0];
+  }
+
   function abrirDialogCliente(tenant) {
     var dlg = $("#dlg-cliente");
     var form = $("#form-cliente");
@@ -169,7 +173,6 @@
 
     if (tenant) {
       form.nome.value = tenant.nome;
-      form.logo_url.value = tenant.logo_url || "";
       form.tela_dashboard.checked = (tenant.telas || {}).dashboard !== false;
       form.tela_sinistros.checked = (tenant.telas || {}).sinistros !== false;
       form.ativo.checked = tenant.ativo;
@@ -190,7 +193,7 @@
     try {
       if (id) {
         await api.atualizarTenant({
-          id: id, nome: nome, logo_url: form.logo_url.value.trim(),
+          id: id, nome: nome, logo_url: (tenantPorId(id) || {}).logo_url || "",
           telas: { dashboard: form.tela_dashboard.checked, sinistros: form.tela_sinistros.checked },
           ativo: form.ativo.checked
         });
@@ -198,7 +201,7 @@
       } else {
         var slug = form.slug.value.trim();
         if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) throw new Error("Identificador inválido: use letras minúsculas, números e hífen.");
-        await api.criarTenant({ nome: nome, slug: slug, template: form.template.value, logo_url: form.logo_url.value.trim() });
+        await api.criarTenant({ nome: nome, slug: slug, template: form.template.value });
         toast("Cliente " + nome + " criado com os módulos do modelo.", "ok");
       }
       $("#dlg-cliente").close();

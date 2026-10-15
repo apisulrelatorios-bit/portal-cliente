@@ -307,3 +307,4 @@ Ponto a decidir: o processo semiautomático de cadastro de itens que o Everton v
 | 10 | Hospedagem na Vercel |
 | 11 | Thumbnails semiautomáticos: imagem, PDF e vídeo automáticos; Power BI, site e Office manuais (print + upload); sem serviço pago; só Supabase Storage |
 | 12 | Template "Padrão Apisul" = planilha padrão; tenants novos nascem sem itens, salvo pedido explícito |
+| 13 | Identidade (nome e logo) é configurada **dentro do cliente**, em `configuracoes.html`, pelo operador com "pode configurar". O Admin só dá o nome inicial; a Administração mostra a identidade da plataforma (Grupo Apisul). Logos ficam no Storage, bucket `logos/<tenant_id>/` |

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configurações | Portal de Gestão & Performance</title>
+  <link rel="icon" type="image/png" href="https://repositorio-apisul.github.io/mondelez/icone-apisul.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/portal.css">
+  <link rel="stylesheet" href="css/client-brand.css">
+  <link rel="stylesheet" href="css/sidebar-user.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/modulo.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+  <div class="portal-shell">
+    <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="brand brand--apisul">
+        <img src="https://repositorio-apisul.github.io/mondelez/logo-apisul-branca.png" alt="Grupo Apisul">
+      </div>
+      <div class="side-label">Navegação</div>
+      <nav class="nav"></nav>
+      <div class="sidebar-actions">
+    <div class="sidebar-foot"><span>Ambiente corporativo</span><small>Versão da atualização 2.2</small></div>
+        <button class="logout-button" id="logout-button" type="button">↪ <span>Sair</span></button>
+      </div>
+    </aside>
+    <main class="main-content dashboard-page" id="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="client-badge" aria-label="Cliente atual">
+            <span class="client-icon logo-tile" id="client-logo"><span id="client-initial">A</span></span>
+            <div><small>Portal de Gestão &amp; Performance</small><strong id="client-name">Cliente</strong></div>
+          </div>
+        </div>
+        <div class="topbar-user" aria-label="Usuário autenticado">
+          <div class="topbar-user-avatar" id="topbar-user-avatar"><span>U</span></div>
+          <div><small>Usuário autenticado</small><strong id="topbar-user-name">Usuário</strong></div>
+        </div>
+      </header>
+
+      <nav class="breadcrumb" aria-label="Trilha de navegação">
+        <a href="dashboard.html">Visão geral</a><span>/</span><span aria-current="page">Configurações</span>
+      </nav>
+
+      <div class="gr-hero-banner gl-hero-banner">
+        <div class="hero-text-content">
+          <div class="hero-title-group">
+            <span class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span>
+            <h1>Configurações do portal</h1>
+          </div>
+          <p>Ajuste como o portal deste cliente aparece para os usuários: nome, logo e telas disponíveis.</p>
+        </div>
+      </div>
+
+      <form class="config-form" id="form-config" novalidate>
+        <section class="config-card" aria-labelledby="titulo-identidade">
+          <header>
+            <h2 id="titulo-identidade">Identidade</h2>
+            <p>Aparece no topo do portal e no seletor de cliente.</p>
+          </header>
+          <div class="admin-form config-body">
+            <label>Nome do cliente<input name="nome" required maxlength="80"></label>
+            <div class="config-logo">
+              <span class="config-logo-label">Logo</span>
+              <div class="config-logo-row">
+                <div class="config-logo-preview" id="logo-preview"><span id="logo-inicial">?</span></div>
+                <div class="config-logo-actions">
+                  <label class="admin-btn" for="logo-arquivo">Enviar imagem</label>
+                  <input type="file" id="logo-arquivo" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" hidden>
+                  <button type="button" class="admin-btn admin-btn--ghost" id="btn-remover-logo">Remover logo</button>
+                  <small>PNG, JPG, WEBP, SVG ou GIF, até 2 MB. De preferência quadrada e com fundo transparente.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="config-card" aria-labelledby="titulo-telas">
+          <header>
+            <h2 id="titulo-telas">Telas do portal</h2>
+            <p>Telas desligadas somem do menu para todos os usuários deste cliente.</p>
+          </header>
+          <div class="admin-form config-body">
+            <label class="admin-check"><input type="checkbox" name="tela_dashboard"> Visão geral (dashboard)</label>
+            <label class="admin-check"><input type="checkbox" name="tela_sinistros"> Portal de Sinistros</label>
+          </div>
+        </section>
+
+        <p class="admin-form-erro" role="alert" hidden></p>
+        <div class="config-actions">
+          <button type="button" class="admin-btn" id="btn-descartar">Descartar alterações</button>
+          <button type="submit" class="admin-btn admin-btn--primary">Salvar configurações</button>
+        </div>
+      </form>
+
+      <p class="page-footer-note">Portal de Gestão &amp; Performance · Configurações</p>
+    </main>
+  </div>
+
+  <div class="admin-toast" id="admin-toast" role="status" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="assets/portal-data.js"></script>
+  <script src="assets/app-shell.js"></script>
+  <script src="assets/configuracoes.js"></script>
+</body>
+</html>

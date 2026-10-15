@@ -340,8 +340,38 @@
     definirAdmin: function (userId, valor) { return adminUsuarios("definir_admin", { user_id: userId, admin: valor }); }
   };
 
+  /* ---------------- Configurações do tenant (operador com "pode configurar") ---------------- */
+
+  var LOGO_BUCKET = "logos";
+  var LOGO_PREFIXO = SUPABASE_URL + "/storage/v1/object/public/" + LOGO_BUCKET + "/";
+
+  var configuracao = {
+    /* Nome, logo e telas do cliente (o banco confere a permissão). */
+    salvar: async function (tenantId, dados) {
+      must(await client.from("tenants").update({
+        nome: dados.nome, logo_url: dados.logo_url || null, telas: dados.telas
+      }).eq("id", tenantId).select("id").single());
+    },
+    /* Envia a imagem para logos/<tenant_id>/ e devolve a URL pública. */
+    enviarLogo: async function (tenantId, arquivo) {
+      var ext = (arquivo.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+      var caminho = tenantId + "/logo-" + Date.now() + "." + ext;
+      must(await client.storage.from(LOGO_BUCKET).upload(caminho, arquivo, {
+        cacheControl: "3600", upsert: false, contentType: arquivo.type
+      }));
+      return client.storage.from(LOGO_BUCKET).getPublicUrl(caminho).data.publicUrl;
+    },
+    /* Apaga do armazenamento uma logo antiga que foi enviada por aqui. */
+    apagarLogo: async function (url) {
+      if (!url || url.indexOf(LOGO_PREFIXO) !== 0) return;
+      var caminho = decodeURIComponent(url.slice(LOGO_PREFIXO.length).split("?")[0]);
+      await client.storage.from(LOGO_BUCKET).remove([caminho]);
+    }
+  };
+
   window.PortalData = {
     admin: admin,
+    configuracao: configuracao,
     client: client,
     getSession: getSession,
     signIn: signIn,

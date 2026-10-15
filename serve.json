@@ -32,6 +32,10 @@
     {
       "source": "/admin",
       "destination": "/admin.html"
+    },
+    {
+      "source": "/configuracoes",
+      "destination": "/configuracoes.html"
     }
   ]
 }
