@@ -513,7 +513,6 @@
     bindPageTransitions();
 
     document.documentElement.classList.add("session-ready");
-    setTimeout(function () { document.documentElement.classList.add("entrada-feita"); }, 400);
     if (typeof options.onReady === "function") options.onReady(state);
     document.dispatchEvent(new CustomEvent("portal:ready", { detail: state }));
     return state;

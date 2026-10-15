@@ -318,17 +318,14 @@ html.page-leaving .dashboard-page {
   transform: translateY(12px) scale(.985);
   pointer-events: none;
 }
-/* Topo fica parado; o conteúdo abaixo dele entra uma vez quando os dados
-   chegam (session-ready). Depois disso (entrada-feita) trocar de aba não
-   repete a animação da página inteira. */
-html:not(.session-ready) .dashboard-page > :not(.topbar) { opacity: 0; }
-html.session-ready:not(.entrada-feita) .dashboard-page > :not(.topbar) {
-  animation: page-enter .32s cubic-bezier(.2,.75,.2,1) both;
-}
-@keyframes page-enter {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+/* Topo fica parado. O conteúdo abaixo dele fica escondido e com as
+   animações PAUSADAS até os dados chegarem (session-ready); aí cada bloco
+   roda a sua própria animação de entrada uma única vez. Não trocamos a
+   animação dos blocos (isso fazia o banner da Visão geral reiniciar). */
+.dashboard-page > :not(.topbar) { transition: opacity .3s ease; }
+html:not(.session-ready) .dashboard-page > :not(.topbar) { visibility: hidden; opacity: 0; }
+html:not(.session-ready) .dashboard-page > :not(.topbar),
+html:not(.session-ready) .dashboard-page > :not(.topbar) * { animation-play-state: paused !important; }
 
 /* Nav links — indicador animado + ícone com life */
 .portal-shell:has(.dashboard-page) .nav a {
@@ -540,7 +537,7 @@ html.session-ready:not(.entrada-feita) .dashboard-page > :not(.topbar) {
 /* Reduced motion — desliga tudo o que for decorativo extra */
 @media (prefers-reduced-motion: reduce) {
   html.page-leaving .dashboard-page,
-  html.session-ready .dashboard-page > :not(.topbar),
+  .dashboard-page > :not(.topbar),
   .dashboard-page .welcome h1,
   .dashboard-page .page-hero h1,
   .dashboard-page .empty-panel .empty-icon,
