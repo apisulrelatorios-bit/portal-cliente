@@ -40,6 +40,10 @@
     {
       "source": "/usuarios",
       "destination": "/usuarios.html"
+    },
+    {
+      "source": "/conteudos",
+      "destination": "/conteudos.html"
     }
   ]
 }

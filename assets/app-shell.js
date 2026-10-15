@@ -73,6 +73,7 @@
     cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>',
     sliders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>',
     users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
+    lista: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1.2"/><circle cx="4" cy="12" r="1.2"/><circle cx="4" cy="18" r="1.2"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>'
   };
 
@@ -112,7 +113,8 @@
     if (!nav) return;
     var html = "";
     if (currentPage() === "admin.html") {
-      nav.innerHTML = '<a class="nav-admin" href="admin.html">' + ICONES_MODULO.cog + '<span>Administração</span></a>';
+      nav.innerHTML = '<a class="nav-admin" href="admin.html" title="Administração">' + ICONES_MODULO.cog + '<span>Administração</span></a>';
+      markActiveNav();
       return;
     }
     if (data.tenant && data.telas.dashboard !== false) {
@@ -124,6 +126,9 @@
     if (data.tenant && data.telas.sinistros !== false) {
       html += '<a data-module="sinistros" href="sinistros.html">' + ICONES_MODULO.file + '<span>Portal de Sinistros</span></a>';
     }
+    if (data.tenant && data.podeGerenciarConteudo) {
+      html += '<a href="conteudos.html">' + ICONES_MODULO.lista + '<span>Conteúdos</span></a>';
+    }
     if (data.tenant && data.podeGerenciarUsuarios) {
       html += '<a href="usuarios.html">' + ICONES_MODULO.users + '<span>Usuários</span></a>';
     }
@@ -134,6 +139,7 @@
       html += '<a class="nav-admin" href="admin.html">' + ICONES_MODULO.cog + '<span>Administração</span></a>';
     }
     nav.innerHTML = html;
+    nav.querySelectorAll("a").forEach(function (a) { a.title = a.textContent.trim(); });
     markActiveNav(); /* o item ativo já nasce marcado (sem transição) */
   }
 
@@ -146,6 +152,7 @@
       (page === "admin.html" && !data.isAdmin) ||
       (page === "configuracoes.html" && !data.podeConfigurar) ||
       (page === "usuarios.html" && !data.podeGerenciarUsuarios) ||
+      (page === "conteudos.html" && !data.podeGerenciarConteudo) ||
       (page !== "admin.html" && !data.tenant) ||
       (page === "dashboard.html" && data.telas.dashboard === false) ||
       (page === "sinistros.html" && data.telas.sinistros === false) ||
@@ -274,6 +281,34 @@
     });
   }
 
+  /* Recolher/expandir o menu lateral (desktop). A escolha fica salva e a
+     classe já é aplicada no <head> de cada página, para não piscar. */
+  var MENU_KEY = "portalMenuRecolhido";
+  var ICONE_RECOLHER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>';
+
+  function bindCollapseMenu() {
+    var sidebar = document.querySelector(".sidebar");
+    var brand = sidebar && sidebar.querySelector(".brand");
+    if (!sidebar || !brand || sidebar.querySelector(".sidebar-collapse")) return;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "sidebar-collapse";
+    btn.innerHTML = ICONE_RECOLHER;
+    function sync() {
+      var recolhido = document.documentElement.classList.contains("menu-recolhido");
+      btn.setAttribute("aria-label", recolhido ? "Expandir menu" : "Recolher menu");
+      btn.setAttribute("title", recolhido ? "Expandir menu" : "Recolher menu");
+      btn.setAttribute("aria-expanded", String(!recolhido));
+    }
+    btn.addEventListener("click", function () {
+      var recolhido = document.documentElement.classList.toggle("menu-recolhido");
+      try { window.localStorage.setItem(MENU_KEY, recolhido ? "1" : "0"); } catch (_) {}
+      sync();
+    });
+    brand.insertAdjacentElement("afterend", btn);
+    sync();
+  }
+
   function bindMobileMenu() {
     var toggle = document.getElementById("menu-toggle");
     var sidebar = document.querySelector(".sidebar");
@@ -311,7 +346,7 @@
     var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
 
-    var internalPages = ["dashboard.html", "modulo.html", "sinistros.html", "admin.html", "configuracoes.html", "usuarios.html", "gr.html", "gl.html"];
+    var internalPages = ["dashboard.html", "modulo.html", "sinistros.html", "admin.html", "configuracoes.html", "usuarios.html", "conteudos.html", "gr.html", "gl.html"];
     var current = (currentPage() + window.location.search).toLowerCase();
 
     function isInternal(href) {
@@ -388,6 +423,7 @@
         isAdmin: data.isAdmin, name: data.name, client: data.client, clientLabel: data.clientLabel,
         clientLogo: data.clientLogo, photo: data.photo, perfil: data.perfil,
         podeConfigurar: data.podeConfigurar, podeGerenciarUsuarios: data.podeGerenciarUsuarios,
+        podeGerenciarConteudo: data.podeGerenciarConteudo,
         tenant: data.tenant ? { id: data.tenant.id } : null,
         tenants: data.tenants.map(function (t) { return { id: t.id }; }),
         modulos: data.modulos, telas: data.telas
@@ -404,6 +440,7 @@
   }
 
   function renderChrome(data) {
+    bindCollapseMenu();
     buildNav(data);
     populateIdentity(data);
     addTenantSwitch(data);
@@ -493,6 +530,8 @@
       podeConfigurar: ctx.tenant ? ctx.tenant.pode_configurar : isAdmin,
       /* Operador libera acesso de usuários Cliente. */
       podeGerenciarUsuarios: Boolean(ctx.tenant) && ctx.tenant.papel === "operador",
+      /* Operador cadastra e edita os conteúdos das listas. */
+      podeGerenciarConteudo: Boolean(ctx.tenant) && ctx.tenant.papel === "operador",
       tenant: ctx.tenant,
       tenants: ctx.tenants,
       modulos: ctx.modulos,

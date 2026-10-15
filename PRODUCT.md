@@ -278,10 +278,10 @@ Ponto a decidir: o processo semiautomático de cadastro de itens que o Everton v
 | **0 — Fundação** ✅ | Schema, RLS, validação de itens, template "Padrão Apisul", tenant Mondelez com os 14 itens (Storage ainda pendente) |
 | **1 — Login e shell** ✅ | Login com e-mail ou usuário, seletor de tenant, menu dinâmico (cores do tenant ainda pendentes) |
 | **2 — GR / GL no Supabase** ✅ | `modulo.html?modulo=<slug>`: abas → visão em cards, lendo de `itens`; gr.html/gl.html redirecionam |
-| **3 — Operação** (em parte) | ✅ `usuarios.html`: operador cria, bloqueia, redefine senha e remove acesso de usuários Cliente · ⏳ CRUD de itens pelo operador |
+| **3 — Operação** ✅ | `usuarios.html` (usuários Cliente) e `conteudos.html` (tabela + formulário gerado pelas colunas da lista: criar, editar, excluir) |
 | **4 — Configuração do tenant** | Editor de listas, colunas, opções, módulos, abas, telas e cores |
 | **5 — Console Admin** ✅ | `admin.html`: clientes (criar por template, editar, ativar) e usuários (criar, vínculos, senha, bloqueio, Admin) via Edge Function `admin-usuarios` |
-| **6 — Thumbnails** | Detecção de tipo, geração automática no navegador, upload manual com print, filtro de pendentes |
+| **6 — Thumbnails** ✅ | Em `conteudos.html`: imagem/YouTube/Vimeo/PDF/vídeo automáticos (PDF via pdf.js no navegador); Power BI/site/Office pedem print (arrastar, Ctrl+V ou arquivo); filtro "Thumbnail pendente"; capas no bucket `thumbnails/<tenant_id>/` |
 | **7 — Dashboard e Sinistros** | Migrar as telas de sistema para o novo modelo |
 | **8 — Migração e corte** | Importar dados do SharePoint, publicar na Vercel, desligar os fluxos |
 

@@ -419,10 +419,69 @@
     removerAcesso: admin.removerVinculo
   };
 
+  /* ---------------- Conteúdos (listas no estilo SharePoint, operador) ---------------- */
+
+  var THUMB_BUCKET = "thumbnails";
+  var THUMB_PREFIXO = SUPABASE_URL + "/storage/v1/object/public/" + THUMB_BUCKET + "/";
+
+  var conteudos = {
+    listas: function (tenantId) {
+      return client.from("listas").select("id, slug, nome, descricao")
+        .eq("tenant_id", tenantId).order("nome").then(must);
+    },
+    /* Colunas da lista (na ordem) com as opções de escolha de cada uma. */
+    estrutura: async function (listaId) {
+      var colunas = must(await client.from("colunas")
+        .select("id, chave, rotulo, tipo, obrigatoria, padrao, ordem, oculta, config")
+        .eq("lista_id", listaId).order("ordem"));
+      var ids = colunas.map(function (c) { return c.id; });
+      var opcoes = ids.length ? must(await client.from("coluna_opcoes")
+        .select("coluna_id, valor, rotulo, cor, ordem, ativa")
+        .in("coluna_id", ids).order("ordem")) : [];
+      colunas.forEach(function (c) {
+        c.opcoes = opcoes.filter(function (o) { return o.coluna_id === c.id; });
+      });
+      return colunas;
+    },
+    itens: function (listaId) {
+      return client.from("itens").select("id, dados, created_at, updated_at")
+        .eq("lista_id", listaId).order("updated_at", { ascending: false }).then(must);
+    },
+    criar: async function (tenantId, listaId, dados) {
+      return must(await client.from("itens").insert({ tenant_id: tenantId, lista_id: listaId, dados: dados })
+        .select("id").single());
+    },
+    atualizar: async function (id, dados) {
+      return must(await client.from("itens").update({ dados: dados }).eq("id", id).select("id").single());
+    },
+    excluir: async function (id) {
+      must(await client.from("itens").delete().eq("id", id));
+    },
+    /* Envia a imagem da capa para thumbnails/<tenant_id>/ e devolve a URL pública. */
+    enviarThumbnail: async function (tenantId, blob, nomeBase) {
+      var tipo = blob.type || "image/png";
+      var ext = ({ "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" })[tipo] || "png";
+      var base = String(nomeBase || "thumbnail").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "thumbnail";
+      var caminho = tenantId + "/" + base + "-" + Date.now() + "." + ext;
+      must(await client.storage.from(THUMB_BUCKET).upload(caminho, blob, {
+        cacheControl: "3600", upsert: false, contentType: tipo
+      }));
+      return client.storage.from(THUMB_BUCKET).getPublicUrl(caminho).data.publicUrl;
+    },
+    /* Apaga uma capa antiga, se ela foi enviada por aqui (thumbnails do Supabase). */
+    apagarThumbnail: async function (url) {
+      if (!url || url.indexOf(THUMB_PREFIXO) !== 0) return;
+      var caminho = decodeURIComponent(url.slice(THUMB_PREFIXO.length).split("?")[0]);
+      await client.storage.from(THUMB_BUCKET).remove([caminho]);
+    }
+  };
+
   window.PortalData = {
     admin: admin,
     configuracao: configuracao,
     equipe: equipe,
+    conteudos: conteudos,
     client: client,
     getSession: getSession,
     signIn: signIn,

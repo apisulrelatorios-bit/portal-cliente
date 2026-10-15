@@ -80,3 +80,40 @@ html:not(.shell-ready) .nav::before {
   html:not(.shell-ready) .client-badge strong, html:not(.shell-ready) .nav::before,
   html:not(.session-ready) #module-title { animation: none; }
 }
+
+/* ---------- Menu lateral recolhível (desktop) ---------- */
+.sidebar { transition: transform .25s ease, width .22s ease, padding .22s ease; }
+.main-content { transition: margin-left .22s ease; }
+.sidebar-collapse {
+  position: absolute; top: 34px; right: 12px; z-index: 2;
+  width: 30px; height: 30px; border-radius: 9px; border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06); color: #cfe0f2; cursor: pointer;
+  display: grid; place-items: center; padding: 0;
+  transition: background .18s ease, transform .22s ease;
+}
+.sidebar-collapse:hover { background: rgba(255,255,255,.14); color: #fff; }
+.sidebar-collapse:focus-visible { outline: 2px solid #7fb3ff; outline-offset: 2px; }
+.sidebar-collapse svg { width: 16px; height: 16px; }
+.sidebar .brand { padding-right: 40px; }
+
+@media (min-width: 781px) {
+  html.menu-recolhido { --sidebar-w: 78px; --sidebar-w-md: 78px; }
+  html.menu-recolhido .sidebar { padding: 24px 12px; overflow-x: hidden; }
+  html.menu-recolhido .sidebar .brand { padding: 0; justify-content: center; }
+  html.menu-recolhido .brand--apisul img { width: 42px; height: 42px; object-fit: cover; object-position: left center; }
+  html.menu-recolhido .sidebar-collapse { position: static; margin: 14px auto 0; transform: rotate(180deg); }
+  html.menu-recolhido .side-label { visibility: hidden; height: 0; margin: 18px 0 8px; }
+  html.menu-recolhido .nav a { justify-content: center; padding: 12px 0; gap: 0; }
+  html.menu-recolhido .nav a span { display: none; }
+  html.menu-recolhido .portal-shell .nav a:hover { transform: none; }
+  html.menu-recolhido .sidebar-foot { display: none; }
+  html.menu-recolhido .logout-button { font-size: 0; padding-left: 0; padding-right: 0; justify-content: center; }
+  html.menu-recolhido .logout-button span { display: none; }
+  html.menu-recolhido .logout-button::before { content: "↪"; font-size: 16px; }
+}
+@media (max-width: 780px) {
+  .sidebar-collapse { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, .main-content, .sidebar-collapse { transition: none; }
+}
