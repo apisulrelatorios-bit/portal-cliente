@@ -105,6 +105,10 @@
       if (!session) return false;
       var profile = await window.PortalData.loadProfile(session.user.id);
       var tenants = await window.PortalData.listTenants(profile);
+      if (!tenants.length && profile.is_platform_admin) {
+        window.location.href = "admin.html";
+        return true;
+      }
       if (!tenants.length) {
         await window.PortalData.signOut();
         showMessage("Sua conta ainda não tem acesso a nenhum cliente. Fale com o administrador.", "error");

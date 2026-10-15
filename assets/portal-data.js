@@ -282,7 +282,66 @@
     return modulo;
   }
 
+  /* ---------------- Administração (só Admin; o banco confere) ---------------- */
+
+  function rpc(name, args) {
+    return client.rpc(name, args || {}).then(must);
+  }
+
+  /* Chama a Edge Function admin-usuarios e devolve a mensagem de erro dela. */
+  async function adminUsuarios(acao, payload) {
+    var res = await client.functions.invoke("admin-usuarios", {
+      body: Object.assign({ acao: acao }, payload || {})
+    });
+    if (res.error) {
+      var msg = res.error.message;
+      try {
+        var body = await res.error.context.json();
+        if (body && body.erro) msg = body.erro;
+      } catch (_) {}
+      throw new Error(msg);
+    }
+    return res.data;
+  }
+
+  var admin = {
+    listarTenants: function () { return rpc("admin_listar_tenants"); },
+    listarUsuarios: function () { return rpc("admin_listar_usuarios"); },
+    listarTemplates: async function () {
+      return must(await client.from("templates").select("id, slug, nome").order("nome"));
+    },
+    criarTenant: function (dados) {
+      return rpc("provisionar_tenant", {
+        p_nome: dados.nome, p_slug: dados.slug, p_template: dados.template,
+        p_incluir_itens: false, p_logo_url: dados.logo_url || null
+      });
+    },
+    atualizarTenant: function (dados) {
+      return rpc("admin_atualizar_tenant", {
+        p_id: dados.id, p_nome: dados.nome, p_logo_url: dados.logo_url || null,
+        p_telas: dados.telas, p_ativo: dados.ativo
+      });
+    },
+    atualizarNome: async function (userId, nome) {
+      must(await client.from("profiles").update({ nome: nome }).eq("id", userId));
+    },
+    salvarVinculo: async function (v) {
+      must(await client.from("memberships").upsert({
+        user_id: v.user_id, tenant_id: v.tenant_id, papel: v.papel,
+        pode_configurar: v.papel === "operador" && Boolean(v.pode_configurar), ativo: v.ativo !== false
+      }, { onConflict: "user_id,tenant_id" }));
+    },
+    removerVinculo: async function (userId, tenantId) {
+      must(await client.from("memberships").delete().eq("user_id", userId).eq("tenant_id", tenantId));
+    },
+    criarUsuario: function (dados) { return adminUsuarios("criar_usuario", dados); },
+    redefinirSenha: function (userId, senha) { return adminUsuarios("redefinir_senha", { user_id: userId, senha: senha }); },
+    bloquear: function (userId, bloquear) { return adminUsuarios("bloquear", { user_id: userId, bloquear: bloquear }); },
+    definirAdmin: function (userId, valor) { return adminUsuarios("definir_admin", { user_id: userId, admin: valor }); }
+  };
+
   window.PortalData = {
+    admin: admin,
     client: client,
     getSession: getSession,
     signIn: signIn,

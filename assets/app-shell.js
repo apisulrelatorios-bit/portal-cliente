@@ -68,6 +68,7 @@
     truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v8H3z"/><path d="M14 10h4l3 3v2h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>',
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1v-9"/></svg>',
     file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>',
+    cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>'
   };
 
@@ -91,25 +92,30 @@
   }
 
   function homePage(data) {
+    if (!data.tenant) return data.isAdmin ? "admin.html" : "index.html?trocar=1";
     if (data.telas.dashboard !== false) return "dashboard.html";
     if (data.modulos.length) return moduleHref(data.modulos[0].slug);
     if (data.telas.sinistros !== false) return "sinistros.html";
     return "dashboard.html";
   }
 
-  /* Monta o menu lateral: Visão geral + módulos do tenant + Sinistros. */
+  /* Monta o menu lateral: Visão geral + módulos do tenant + Sinistros
+     (+ Administração para o Admin da plataforma). */
   function buildNav(data) {
     var nav = document.querySelector(".nav");
     if (!nav) return;
     var html = "";
-    if (data.telas.dashboard !== false) {
+    if (data.tenant && data.telas.dashboard !== false) {
       html += '<a href="dashboard.html">' + ICONES_MODULO.home + '<span>Visão geral</span></a>';
     }
     data.modulos.forEach(function (m) {
       html += '<a data-module="' + escapeAttr(m.slug) + '" href="' + moduleHref(m.slug) + '">' + moduleIcon(m.icone) + '<span>' + escapeAttr(m.nome) + '</span></a>';
     });
-    if (data.telas.sinistros !== false) {
+    if (data.tenant && data.telas.sinistros !== false) {
       html += '<a data-module="sinistros" href="sinistros.html">' + ICONES_MODULO.file + '<span>Portal de Sinistros</span></a>';
+    }
+    if (data.isAdmin) {
+      html += '<a class="nav-admin" href="admin.html">' + ICONES_MODULO.cog + '<span>Administração</span></a>';
     }
     nav.innerHTML = html;
   }
@@ -120,6 +126,8 @@
     var page = currentPage();
     var slugs = data.modulos.map(function (m) { return m.slug; });
     var bloqueada =
+      (page === "admin.html" && !data.isAdmin) ||
+      (page !== "admin.html" && !data.tenant) ||
       (page === "dashboard.html" && data.telas.dashboard === false) ||
       (page === "sinistros.html" && data.telas.sinistros === false) ||
       (page === "modulo.html" && (slugs.indexOf(currentModuleSlug()) === -1 || !data.modulo));
@@ -281,7 +289,7 @@
     var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
 
-    var internalPages = ["dashboard.html", "modulo.html", "sinistros.html", "gr.html", "gl.html"];
+    var internalPages = ["dashboard.html", "modulo.html", "sinistros.html", "admin.html", "gr.html", "gl.html"];
     var current = (currentPage() + window.location.search).toLowerCase();
 
     function isInternal(href) {
@@ -349,35 +357,41 @@
       window.location.replace("index.html");
       return null;
     }
-    if (!ctx.tenant) {
-      window.location.replace("index.html?trocar=1");
+    var isAdmin = Boolean(ctx.profile.is_platform_admin);
+    /* A Administração funciona mesmo sem cliente escolhido (ex.: nenhum tenant ainda). */
+    if (!ctx.tenant && !(isAdmin && currentPage() === "admin.html")) {
+      window.location.replace(isAdmin && !ctx.tenants.length ? "admin.html" : "index.html?trocar=1");
       return null;
     }
 
     var items = [];
-    try {
-      items = await window.PortalData.loadTenantItems(ctx.tenant.id);
-    } catch (error) {
-      console.error("[Portal] Falha ao carregar os itens do tenant:", error);
+    if (ctx.tenant && currentPage() !== "admin.html") {
+      try {
+        items = await window.PortalData.loadTenantItems(ctx.tenant.id);
+      } catch (error) {
+        console.error("[Portal] Falha ao carregar os itens do tenant:", error);
+      }
     }
 
     state = {
       authenticated: true,
+      isAdmin: isAdmin,
+      profile: ctx.profile,
       name: ctx.profile.nome || ctx.profile.username || ctx.user.email || "Usuário",
-      client: ctx.tenant.nome,
-      clientLogo: resolveUrl(ctx.tenant.logo_url || ""),
+      client: ctx.tenant ? ctx.tenant.nome : "Administração",
+      clientLogo: ctx.tenant ? resolveUrl(ctx.tenant.logo_url || "") : "",
       photo: ctx.profile.foto_url || "",
-      perfil: ctx.tenant.papel,
-      podeConfigurar: ctx.tenant.pode_configurar,
+      perfil: ctx.tenant ? ctx.tenant.papel : (isAdmin ? "admin" : ""),
+      podeConfigurar: ctx.tenant ? ctx.tenant.pode_configurar : isAdmin,
       tenant: ctx.tenant,
       tenants: ctx.tenants,
       modulos: ctx.modulos,
-      telas: ctx.tenant.telas || {},
+      telas: ctx.tenant ? (ctx.tenant.telas || {}) : {},
       itensPortal: items,
       itensProcessos: []
     };
 
-    if (currentPage() === "modulo.html") {
+    if (ctx.tenant && currentPage() === "modulo.html") {
       try {
         state.modulo = await window.PortalData.loadModule(ctx.tenant.id, currentModuleSlug(), items);
       } catch (error) {

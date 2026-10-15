@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administração | Portal de Gestão & Performance</title>
+  <link rel="icon" type="image/png" href="https://repositorio-apisul.github.io/mondelez/icone-apisul.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/portal.css">
+  <link rel="stylesheet" href="css/client-brand.css">
+  <link rel="stylesheet" href="css/sidebar-user.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/modulo.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+  <div class="portal-shell">
+    <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="brand brand--apisul">
+        <img src="https://repositorio-apisul.github.io/mondelez/logo-apisul-branca.png" alt="Grupo Apisul">
+      </div>
+      <div class="side-label">Navegação</div>
+      <nav class="nav"></nav>
+      <div class="sidebar-actions">
+    <div class="sidebar-foot"><span>Ambiente corporativo</span><small>Versão da atualização 2.2</small></div>
+        <button class="logout-button" id="logout-button" type="button">↪ <span>Sair</span></button>
+      </div>
+    </aside>
+    <main class="main-content dashboard-page" id="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="client-badge" aria-label="Cliente atual">
+            <span class="client-icon logo-tile" id="client-logo"><span id="client-initial">A</span></span>
+            <div><small>Portal de Gestão &amp; Performance</small><strong id="client-name">Administração</strong></div>
+          </div>
+        </div>
+        <div class="topbar-user" aria-label="Usuário autenticado">
+          <div class="topbar-user-avatar" id="topbar-user-avatar"><span>U</span></div>
+          <div><small>Usuário autenticado</small><strong id="topbar-user-name">Usuário</strong></div>
+        </div>
+      </header>
+
+      <nav class="breadcrumb" aria-label="Trilha de navegação">
+        <a href="dashboard.html">Visão geral</a><span>/</span><span aria-current="page">Administração</span>
+      </nav>
+
+      <div class="gr-hero-banner gl-hero-banner admin-hero">
+        <div class="hero-text-content">
+          <div class="hero-title-group">
+            <span class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span>
+            <h1>Administração da plataforma</h1>
+          </div>
+          <p>Crie e configure clientes, cadastre usuários e defina quem opera e quem consulta cada portal.</p>
+        </div>
+        <div class="hero-stats-container" id="admin-stats">
+          <div class="stat-card">
+            <span class="stat-label">Clientes ativos</span>
+            <div class="stat-value" id="stat-clientes">–</div>
+            <span class="stat-badge" id="stat-clientes-total">carregando</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Usuários</span>
+            <div class="stat-value" id="stat-usuarios">–</div>
+            <span class="stat-badge" id="stat-usuarios-bloq">carregando</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Conteúdos publicados</span>
+            <div class="stat-value" id="stat-itens">–</div>
+            <span class="stat-badge">em todos os clientes</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="module-tabs" id="admin-tabs" role="tablist" aria-label="Seções da administração">
+        <button type="button" class="module-tab is-active" role="tab" aria-selected="true" data-secao="clientes">Clientes<span class="module-tab-count" id="tab-count-clientes">0</span></button>
+        <button type="button" class="module-tab" role="tab" aria-selected="false" tabindex="-1" data-secao="usuarios">Usuários<span class="module-tab-count" id="tab-count-usuarios">0</span></button>
+      </div>
+
+      <section class="admin-section" id="secao-clientes" aria-label="Clientes">
+        <div class="admin-toolbar">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="busca-clientes" placeholder="Buscar cliente..." autocomplete="off">
+          </div>
+          <button type="button" class="admin-btn admin-btn--primary" id="btn-novo-cliente">+ Novo cliente</button>
+        </div>
+        <div class="admin-list" id="lista-clientes" aria-live="polite"><p class="admin-loading">Carregando clientes…</p></div>
+      </section>
+
+      <section class="admin-section" id="secao-usuarios" aria-label="Usuários" hidden>
+        <div class="admin-toolbar">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="busca-usuarios" placeholder="Buscar por nome, e-mail ou usuário..." autocomplete="off">
+          </div>
+          <select id="filtro-cliente" class="admin-select" aria-label="Filtrar por cliente"><option value="">Todos os clientes</option></select>
+          <button type="button" class="admin-btn admin-btn--primary" id="btn-novo-usuario">+ Novo usuário</button>
+        </div>
+        <div class="admin-list" id="lista-usuarios" aria-live="polite"><p class="admin-loading">Carregando usuários…</p></div>
+      </section>
+
+      <p class="page-footer-note">Portal de Gestão &amp; Performance · Administração</p>
+    </main>
+  </div>
+
+  <!-- Cliente: criar / editar -->
+  <dialog class="admin-dialog" id="dlg-cliente" aria-labelledby="dlg-cliente-titulo">
+    <form method="dialog" class="admin-form" id="form-cliente" novalidate>
+      <header><h2 id="dlg-cliente-titulo">Novo cliente</h2><button type="button" class="admin-close" data-fechar aria-label="Fechar">&times;</button></header>
+      <label>Nome do cliente<input name="nome" required maxlength="80" placeholder="Ex.: White Martins"></label>
+      <label data-so-novo>Identificador
+        <input name="slug" required maxlength="40" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="white-martins">
+        <small>Usado internamente. Só letras minúsculas, números e hífen. Não pode ser alterado depois.</small>
+      </label>
+      <label>Endereço da logo (URL)<input name="logo_url" type="url" placeholder="https://..."></label>
+      <label data-so-novo>Modelo inicial<select name="template"></select>
+        <small>Cria a lista Itens do Portal e os módulos GR e GL, sem conteúdos.</small>
+      </label>
+      <fieldset data-so-edicao>
+        <legend>Telas do portal</legend>
+        <label class="admin-check"><input type="checkbox" name="tela_dashboard"> Visão geral (dashboard)</label>
+        <label class="admin-check"><input type="checkbox" name="tela_sinistros"> Portal de Sinistros</label>
+      </fieldset>
+      <label class="admin-check" data-so-edicao><input type="checkbox" name="ativo"> Cliente ativo (desmarque para bloquear o acesso de todos os usuários dele)</label>
+      <p class="admin-form-erro" role="alert" hidden></p>
+      <footer><button type="button" class="admin-btn" data-fechar>Cancelar</button><button type="submit" class="admin-btn admin-btn--primary">Salvar</button></footer>
+    </form>
+  </dialog>
+
+  <!-- Usuário: criar -->
+  <dialog class="admin-dialog" id="dlg-usuario" aria-labelledby="dlg-usuario-titulo">
+    <form method="dialog" class="admin-form" id="form-usuario" novalidate>
+      <header><h2 id="dlg-usuario-titulo">Novo usuário</h2><button type="button" class="admin-close" data-fechar aria-label="Fechar">&times;</button></header>
+      <label>Nome<input name="nome" required maxlength="80" placeholder="Nome e sobrenome"></label>
+      <div class="admin-grid-2">
+        <label>E-mail<input name="email" type="email" placeholder="nome@empresa.com"></label>
+        <label>Usuário<input name="username" maxlength="40" placeholder="ex.: joao.silva"></label>
+      </div>
+      <small class="admin-hint">Preencha e-mail, usuário ou os dois. Quem não tem e-mail entra só com o usuário (e a senha é redefinida aqui pela administração).</small>
+      <label>Senha provisória
+        <span class="admin-inline"><input name="senha" required minlength="8" autocomplete="new-password"><button type="button" class="admin-btn" id="btn-gerar-senha">Gerar</button></span>
+        <small>Mínimo de 8 caracteres. Copie e envie para a pessoa.</small>
+      </label>
+      <fieldset>
+        <legend>Acesso aos clientes</legend>
+        <small class="admin-hint">Cliente: só consulta. Operador: cadastra conteúdo e libera acesso. "Pode configurar": o operador também muda listas, módulos e cores.</small>
+        <div id="vinculos-novo"></div>
+        <button type="button" class="admin-btn admin-btn--ghost" id="btn-add-vinculo">+ Adicionar cliente</button>
+      </fieldset>
+      <label class="admin-check"><input type="checkbox" name="admin"> Administrador da plataforma (acesso total a todos os clientes)</label>
+      <p class="admin-form-erro" role="alert" hidden></p>
+      <footer><button type="button" class="admin-btn" data-fechar>Cancelar</button><button type="submit" class="admin-btn admin-btn--primary">Criar usuário</button></footer>
+    </form>
+  </dialog>
+
+  <!-- Usuário: editar -->
+  <dialog class="admin-dialog" id="dlg-editar-usuario" aria-labelledby="dlg-editar-titulo">
+    <form method="dialog" class="admin-form" id="form-editar-usuario" novalidate>
+      <header><h2 id="dlg-editar-titulo">Editar usuário</h2><button type="button" class="admin-close" data-fechar aria-label="Fechar">&times;</button></header>
+      <p class="admin-sub" id="editar-identificacao"></p>
+      <label>Nome<input name="nome" required maxlength="80"></label>
+      <fieldset>
+        <legend>Acesso aos clientes</legend>
+        <div id="vinculos-editar"></div>
+        <button type="button" class="admin-btn admin-btn--ghost" id="btn-add-vinculo-editar">+ Adicionar cliente</button>
+      </fieldset>
+      <label class="admin-check"><input type="checkbox" name="admin"> Administrador da plataforma</label>
+      <fieldset>
+        <legend>Senha</legend>
+        <span class="admin-inline"><input name="nova_senha" placeholder="Nova senha (mín. 8)" autocomplete="new-password"><button type="button" class="admin-btn" id="btn-gerar-senha-editar">Gerar</button><button type="button" class="admin-btn" id="btn-redefinir-senha">Redefinir</button></span>
+      </fieldset>
+      <p class="admin-form-erro" role="alert" hidden></p>
+      <p class="admin-form-ok" role="status" hidden></p>
+      <footer>
+        <button type="button" class="admin-btn admin-btn--danger" id="btn-bloquear">Bloquear acesso</button>
+        <span class="admin-spacer"></span>
+        <button type="button" class="admin-btn" data-fechar>Cancelar</button>
+        <button type="submit" class="admin-btn admin-btn--primary">Salvar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div class="admin-toast" id="admin-toast" role="status" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="assets/portal-data.js"></script>
+  <script src="assets/app-shell.js"></script>
+  <script src="assets/admin.js"></script>
+</body>
+</html>

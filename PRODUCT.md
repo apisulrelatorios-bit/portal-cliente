@@ -1,7 +1,7 @@
 # Portal de Gestão & Performance — Produto
 
 > Documento vivo. Define o que o produto é, quem usa, como os dados são organizados e em que ordem vamos construir.
-> Status: **em implementação** (fases 0, 1 e 2 concluídas) · Migrations em `supabase/migrations/` · Última revisão: 2026-10-14
+> Status: **em implementação** (fases 0, 1, 2 e 5 concluídas) · Migrations em `supabase/migrations/` · Última revisão: 2026-10-14
 
 ---
 
@@ -280,7 +280,7 @@ Ponto a decidir: o processo semiautomático de cadastro de itens que o Everton v
 | **2 — GR / GL no Supabase** ✅ | `modulo.html?modulo=<slug>`: abas → visão em cards, lendo de `itens`; gr.html/gl.html redirecionam |
 | **3 — Operação** | CRUD de itens pelo operador, gestão de usuários Cliente |
 | **4 — Configuração do tenant** | Editor de listas, colunas, opções, módulos, abas, telas e cores |
-| **5 — Console Admin** | Tenants, templates, operadores |
+| **5 — Console Admin** ✅ | `admin.html`: clientes (criar por template, editar, ativar) e usuários (criar, vínculos, senha, bloqueio, Admin) via Edge Function `admin-usuarios` |
 | **6 — Thumbnails** | Detecção de tipo, geração automática no navegador, upload manual com print, filtro de pendentes |
 | **7 — Dashboard e Sinistros** | Migrar as telas de sistema para o novo modelo |
 | **8 — Migração e corte** | Importar dados do SharePoint, publicar na Vercel, desligar os fluxos |
