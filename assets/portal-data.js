@@ -44,6 +44,48 @@
     return result.data;
   }
 
+  /* ---------------- Compressão de imagens ----------------
+     Toda imagem enviada (foto de perfil, logo, thumbnail) é reduzida e
+     convertida para WEBP no navegador antes do upload, para economizar
+     espaço. opcoes: { max: lado maior em px, qualidade: 0–1, quadrado: bool }
+     SVG é mantido como está (já é leve e vetorial). */
+  function carregarImagem(arquivo) {
+    return new Promise(function (ok, falha) {
+      var url = URL.createObjectURL(arquivo);
+      var img = new Image();
+      img.onload = function () { URL.revokeObjectURL(url); ok(img); };
+      img.onerror = function () { URL.revokeObjectURL(url); falha(new Error("Não foi possível ler a imagem.")); };
+      img.src = url;
+    });
+  }
+
+  async function comprimirImagem(arquivo, opcoes) {
+    opcoes = opcoes || {};
+    if (!arquivo || arquivo.type === "image/svg+xml") return arquivo;
+    var max = opcoes.max || 1024;
+    var qualidade = opcoes.qualidade || 0.75;
+    var img = await carregarImagem(arquivo);
+    var sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+    if (opcoes.quadrado) {
+      var lado = Math.min(sw, sh);
+      sx = Math.round((sw - lado) / 2); sy = Math.round((sh - lado) / 2); sw = sh = lado;
+    }
+    var escala = Math.min(1, max / Math.max(sw, sh));
+    var canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(sw * escala));
+    canvas.height = Math.max(1, Math.round(sh * escala));
+    var ctx = canvas.getContext("2d");
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    var blob = await new Promise(function (ok) { canvas.toBlob(ok, "image/webp", qualidade); });
+    if (!blob) return arquivo;
+    /* Se o navegador não gera WEBP, cai para JPEG (sem transparência). */
+    if (blob.type !== "image/webp") {
+      blob = await new Promise(function (ok) { canvas.toBlob(ok, "image/jpeg", qualidade); }) || blob;
+    }
+    return blob.size < arquivo.size || escala < 1 || opcoes.quadrado ? blob : arquivo;
+  }
+
   /* ---------------- Autenticação ---------------- */
 
   async function getSession() {
@@ -388,10 +430,11 @@
     },
     /* Envia a imagem para logos/<tenant_id>/ e devolve a URL pública. */
     enviarLogo: async function (tenantId, arquivo) {
-      var ext = (arquivo.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+      var img = await comprimirImagem(arquivo, { max: 512, qualidade: 0.85 });
+      var ext = ({ "image/webp": "webp", "image/jpeg": "jpg", "image/svg+xml": "svg", "image/gif": "gif" })[img.type] || "png";
       var caminho = tenantId + "/logo-" + Date.now() + "." + ext;
-      must(await client.storage.from(LOGO_BUCKET).upload(caminho, arquivo, {
-        cacheControl: "3600", upsert: false, contentType: arquivo.type
+      must(await client.storage.from(LOGO_BUCKET).upload(caminho, img, {
+        cacheControl: "3600", upsert: false, contentType: img.type
       }));
       return client.storage.from(LOGO_BUCKET).getPublicUrl(caminho).data.publicUrl;
     },
@@ -459,6 +502,7 @@
     },
     /* Envia a imagem da capa para thumbnails/<tenant_id>/ e devolve a URL pública. */
     enviarThumbnail: async function (tenantId, blob, nomeBase) {
+      blob = await comprimirImagem(blob, { max: 800, qualidade: 0.72 });
       var tipo = blob.type || "image/png";
       var ext = ({ "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" })[tipo] || "png";
       var base = String(nomeBase || "thumbnail").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
@@ -477,7 +521,44 @@
     }
   };
 
+  /* ---------------- Foto de perfil (cada usuário a sua) ---------------- */
+
+  var AVATAR_BUCKET = "avatars";
+  var AVATAR_PREFIXO = SUPABASE_URL + "/storage/v1/object/public/" + AVATAR_BUCKET + "/";
+
+  var perfil = {
+    /* Comprime (256×256), envia, grava em profiles.foto_url e apaga a antiga. */
+    enviarFoto: async function (userId, arquivo, fotoAntiga) {
+      var img = await comprimirImagem(arquivo, { max: 256, qualidade: 0.8, quadrado: true });
+      var ext = img.type === "image/jpeg" ? "jpg" : "webp";
+      var caminho = userId + "/foto-" + Date.now() + "." + ext;
+      must(await client.storage.from(AVATAR_BUCKET).upload(caminho, img, {
+        cacheControl: "3600", upsert: false, contentType: img.type
+      }));
+      var url = client.storage.from(AVATAR_BUCKET).getPublicUrl(caminho).data.publicUrl;
+      try {
+        must(await client.from("profiles").update({ foto_url: url }).eq("id", userId).select("id").single());
+      } catch (e) {
+        await client.storage.from(AVATAR_BUCKET).remove([caminho]);
+        throw e;
+      }
+      if (fotoAntiga) perfil.apagarArquivo(fotoAntiga).catch(function () {});
+      return url;
+    },
+    removerFoto: async function (userId, fotoAtual) {
+      must(await client.from("profiles").update({ foto_url: null }).eq("id", userId).select("id").single());
+      if (fotoAtual) perfil.apagarArquivo(fotoAtual).catch(function () {});
+    },
+    apagarArquivo: async function (url) {
+      if (!url || url.indexOf(AVATAR_PREFIXO) !== 0) return;
+      var caminho = decodeURIComponent(url.slice(AVATAR_PREFIXO.length).split("?")[0]);
+      await client.storage.from(AVATAR_BUCKET).remove([caminho]);
+    }
+  };
+
   window.PortalData = {
+    comprimirImagem: comprimirImagem,
+    perfil: perfil,
     admin: admin,
     configuracao: configuracao,
     equipe: equipe,

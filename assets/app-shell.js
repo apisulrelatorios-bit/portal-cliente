@@ -309,6 +309,92 @@
     sync();
   }
 
+  /* ---------- Minha foto: clique no avatar do topo ----------
+     Cada usuário envia/remove a própria foto. A imagem é comprimida
+     (256×256, WEBP) antes do envio — ver PortalData.perfil. */
+  function bindMinhaFoto() {
+    var alvo = document.querySelector(".topbar-user");
+    if (!alvo || alvo.dataset.fotoLigada || !window.PortalData || !window.PortalData.perfil) return;
+    alvo.dataset.fotoLigada = "1";
+    alvo.setAttribute("role", "button");
+    alvo.setAttribute("tabindex", "0");
+    alvo.setAttribute("title", "Alterar minha foto");
+    alvo.classList.add("topbar-user--clicavel");
+
+    var dlg = document.createElement("dialog");
+    dlg.className = "foto-dialog";
+    dlg.setAttribute("aria-labelledby", "foto-dialog-titulo");
+    dlg.innerHTML =
+      '<div class="foto-dialog-corpo">' +
+        '<header><h2 id="foto-dialog-titulo">Minha foto</h2><button type="button" class="foto-fechar" aria-label="Fechar">&times;</button></header>' +
+        '<div class="foto-preview" id="foto-preview"></div>' +
+        '<p class="foto-ajuda">A foto aparece no topo do portal. Ela é reduzida e compactada automaticamente.</p>' +
+        '<p class="foto-msg" role="status" hidden></p>' +
+        '<div class="foto-acoes">' +
+          '<label class="foto-btn foto-btn--primario" for="foto-arquivo">Escolher foto</label>' +
+          '<input type="file" id="foto-arquivo" accept="image/png,image/jpeg,image/webp" hidden>' +
+          '<button type="button" class="foto-btn" id="foto-remover">Remover foto</button>' +
+        "</div>" +
+      "</div>";
+    document.body.appendChild(dlg);
+
+    function msg(texto, erro) {
+      var p = dlg.querySelector(".foto-msg");
+      p.textContent = texto || "";
+      p.hidden = !texto;
+      p.classList.toggle("is-erro", !!erro);
+    }
+    function preview() {
+      var box = dlg.querySelector("#foto-preview");
+      box.innerHTML = state.photo
+        ? '<img src="' + escapeAttr(state.photo) + '" alt="Sua foto">'
+        : "<span>" + escapeAttr(initials(state.name)) + "</span>";
+      dlg.querySelector("#foto-remover").hidden = !state.photo;
+    }
+    function atualizarTopo(url) {
+      state.photo = url || "";
+      populateIdentity(state);
+      if (state.profile) {
+        state.profile.foto_url = url || null;
+        limparCache();
+        salvarCache(state.profile.id, state);
+      }
+      preview();
+    }
+    function abrir() { msg(""); preview(); dlg.showModal(); }
+
+    alvo.addEventListener("click", abrir);
+    alvo.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrir(); } });
+    dlg.querySelector(".foto-fechar").addEventListener("click", function () { dlg.close(); });
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+
+    dlg.querySelector("#foto-arquivo").addEventListener("change", async function (e) {
+      var arquivo = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!arquivo) return;
+      if (!/^image\/(png|jpeg|webp)$/.test(arquivo.type)) { msg("Use uma imagem PNG, JPG ou WEBP.", true); return; }
+      if (arquivo.size > 15 * 1024 * 1024) { msg("A imagem tem mais de 15 MB.", true); return; }
+      msg("Enviando…");
+      try {
+        var url = await window.PortalData.perfil.enviarFoto(state.profile.id, arquivo, state.photo);
+        atualizarTopo(url);
+        msg("Foto atualizada.");
+      } catch (error) {
+        msg("Não foi possível salvar a foto: " + error.message, true);
+      }
+    });
+    dlg.querySelector("#foto-remover").addEventListener("click", async function () {
+      msg("Removendo…");
+      try {
+        await window.PortalData.perfil.removerFoto(state.profile.id, state.photo);
+        atualizarTopo("");
+        msg("Foto removida.");
+      } catch (error) {
+        msg("Não foi possível remover a foto: " + error.message, true);
+      }
+    });
+  }
+
   function bindMobileMenu() {
     var toggle = document.getElementById("menu-toggle");
     var sidebar = document.querySelector(".sidebar");
@@ -552,6 +638,7 @@
     if (!applyModuleAccess(state)) return null;
     if (mudou) renderChrome(state);
     bindLogout();
+    bindMinhaFoto();
     bindMobileMenu();
     bindPageTransitions();
 

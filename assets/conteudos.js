@@ -16,7 +16,7 @@
   var THUMB_KEYS = ["thumbnail", "thumbnail_modo", "status_thumbnail", "url_link_processado"];
   var PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
   var PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-  var MAX_THUMB = 5 * 1024 * 1024;
+  var MAX_THUMB = 20 * 1024 * 1024; /* antes da compressão (vai para ~800 px WEBP) */
 
   var api = null;
   var tenant = null;
@@ -482,7 +482,7 @@
   function usarImagemManual(arquivo) {
     if (!arquivo) return;
     if (!/^image\/(png|jpeg|webp|gif)$/.test(arquivo.type)) { erroForm("Use uma imagem PNG, JPG, WEBP ou GIF."); return; }
-    if (arquivo.size > MAX_THUMB) { erroForm("A imagem tem mais de 5 MB."); return; }
+    if (arquivo.size > MAX_THUMB) { erroForm("A imagem tem mais de 20 MB."); return; }
     erroForm("");
     thumb.seq++;
     limparBlob();

@@ -8,7 +8,7 @@
 (function () {
   "use strict";
 
-  var MAX_BYTES = 2 * 1024 * 1024;
+  var MAX_BYTES = 10 * 1024 * 1024; /* antes da compressão (vai para ~512 px WEBP) */
   var TIPOS = ["image/png", "image/jpeg", "image/webp", "image/svg+xml", "image/gif"];
 
   var tenant = null;
@@ -66,7 +66,7 @@
     event.target.value = "";
     if (!arquivo) return;
     if (TIPOS.indexOf(arquivo.type) === -1) { erro("Formato não aceito. Use PNG, JPG, WEBP, SVG ou GIF."); return; }
-    if (arquivo.size > MAX_BYTES) { erro("A imagem tem mais de 2 MB. Reduza o tamanho e tente de novo."); return; }
+    if (arquivo.size > MAX_BYTES) { erro("A imagem tem mais de 10 MB. Reduza o tamanho e tente de novo."); return; }
     erro("");
     logoNova = arquivo;
     logoRemovida = false;
