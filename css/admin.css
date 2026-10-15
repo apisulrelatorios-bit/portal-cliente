@@ -67,6 +67,7 @@
 .admin-row-nums { display: grid; gap: 2px; font-size: 12.5px; color: var(--muted-400, #7b8ba1); text-align: right; white-space: nowrap; }
 .admin-row-nums strong { color: var(--ink-600, #1f3550); }
 .admin-row-actions { display: flex; gap: 8px; }
+.admin-row-note { font-size: 12px; color: var(--muted-400, #7b8ba1); white-space: nowrap; }
 
 .admin-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .admin-chip {

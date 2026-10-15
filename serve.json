@@ -36,6 +36,10 @@
     {
       "source": "/configuracoes",
       "destination": "/configuracoes.html"
+    },
+    {
+      "source": "/usuarios",
+      "destination": "/usuarios.html"
     }
   ]
 }

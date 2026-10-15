@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Usuários | Portal de Gestão & Performance</title>
+  <link rel="icon" type="image/png" href="https://repositorio-apisul.github.io/mondelez/icone-apisul.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/portal.css">
+  <link rel="stylesheet" href="css/client-brand.css">
+  <link rel="stylesheet" href="css/sidebar-user.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/modulo.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+  <div class="portal-shell">
+    <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="brand brand--apisul">
+        <img src="https://repositorio-apisul.github.io/mondelez/logo-apisul-branca.png" alt="Grupo Apisul">
+      </div>
+      <div class="side-label">Navegação</div>
+      <nav class="nav"></nav>
+      <div class="sidebar-actions">
+    <div class="sidebar-foot"><span>Ambiente corporativo</span><small>Versão da atualização 2.2</small></div>
+        <button class="logout-button" id="logout-button" type="button">↪ <span>Sair</span></button>
+      </div>
+    </aside>
+    <main class="main-content dashboard-page" id="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="client-badge" aria-label="Cliente atual">
+            <span class="client-icon logo-tile" id="client-logo"><span id="client-initial">A</span></span>
+            <div><small>Portal de Gestão &amp; Performance</small><strong id="client-name">Cliente</strong></div>
+          </div>
+        </div>
+        <div class="topbar-user" aria-label="Usuário autenticado">
+          <div class="topbar-user-avatar" id="topbar-user-avatar"><span>U</span></div>
+          <div><small>Usuário autenticado</small><strong id="topbar-user-name">Usuário</strong></div>
+        </div>
+      </header>
+
+      <nav class="breadcrumb" aria-label="Trilha de navegação">
+        <a href="dashboard.html">Visão geral</a><span>/</span><span aria-current="page">Usuários</span>
+      </nav>
+
+      <div class="gr-hero-banner gl-hero-banner">
+        <div class="hero-text-content">
+          <div class="hero-title-group">
+            <span class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span>
+            <h1>Usuários do portal</h1>
+          </div>
+          <p>Libere o acesso de quem vai consultar este portal. Usuários do tipo Cliente veem os conteúdos publicados, sem editar nada.</p>
+        </div>
+      </div>
+
+      <section class="admin-section" aria-label="Usuários">
+        <div class="admin-toolbar">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="busca-usuarios" placeholder="Buscar por nome, e-mail ou usuário..." autocomplete="off">
+          </div>
+          <button type="button" class="admin-btn admin-btn--primary" id="btn-novo-usuario">+ Novo usuário cliente</button>
+        </div>
+        <div class="admin-list" id="lista-usuarios" aria-live="polite"><p class="admin-loading">Carregando usuários…</p></div>
+      </section>
+
+      <p class="page-footer-note">Portal de Gestão &amp; Performance · Usuários</p>
+    </main>
+  </div>
+
+  <!-- Novo usuário cliente -->
+  <dialog class="admin-dialog" id="dlg-usuario" aria-labelledby="dlg-usuario-titulo">
+    <form method="dialog" class="admin-form" id="form-usuario" novalidate>
+      <header><h2 id="dlg-usuario-titulo">Novo usuário cliente</h2><button type="button" class="admin-close" data-fechar aria-label="Fechar">&times;</button></header>
+      <p class="admin-sub" id="novo-usuario-cliente"></p>
+      <label>Nome<input name="nome" required maxlength="80" placeholder="Nome e sobrenome"></label>
+      <div class="admin-grid-2">
+        <label>E-mail<input name="email" type="email" placeholder="nome@empresa.com"></label>
+        <label>Usuário<input name="username" maxlength="40" placeholder="ex.: joao.silva"></label>
+      </div>
+      <small class="admin-hint">Preencha e-mail, usuário ou os dois. Quem não tem e-mail entra só com o usuário.</small>
+      <label>Senha provisória
+        <span class="admin-inline"><input name="senha" required minlength="8" autocomplete="new-password"><button type="button" class="admin-btn" id="btn-gerar-senha">Gerar</button></span>
+        <small>Mínimo de 8 caracteres. Copie e envie para a pessoa.</small>
+      </label>
+      <p class="admin-form-erro" role="alert" hidden></p>
+      <footer><button type="button" class="admin-btn" data-fechar>Cancelar</button><button type="submit" class="admin-btn admin-btn--primary">Criar usuário</button></footer>
+    </form>
+  </dialog>
+
+  <!-- Gerenciar usuário cliente -->
+  <dialog class="admin-dialog" id="dlg-gerenciar" aria-labelledby="dlg-gerenciar-titulo">
+    <form method="dialog" class="admin-form" id="form-gerenciar" novalidate>
+      <header><h2 id="dlg-gerenciar-titulo">Usuário</h2><button type="button" class="admin-close" data-fechar aria-label="Fechar">&times;</button></header>
+      <p class="admin-sub" id="gerenciar-identificacao"></p>
+      <fieldset>
+        <legend>Senha</legend>
+        <span class="admin-inline"><input name="nova_senha" placeholder="Nova senha (mín. 8)" autocomplete="new-password"><button type="button" class="admin-btn" id="btn-gerar-senha-2">Gerar</button><button type="button" class="admin-btn" id="btn-redefinir-senha">Redefinir</button></span>
+      </fieldset>
+      <p class="admin-form-erro" role="alert" hidden></p>
+      <p class="admin-form-ok" role="status" hidden></p>
+      <footer>
+        <button type="button" class="admin-btn admin-btn--danger" id="btn-remover-acesso">Remover acesso</button>
+        <button type="button" class="admin-btn" id="btn-bloquear">Bloquear</button>
+        <span class="admin-spacer"></span>
+        <button type="button" class="admin-btn" data-fechar>Fechar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div class="admin-toast" id="admin-toast" role="status" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="assets/portal-data.js"></script>
+  <script src="assets/app-shell.js"></script>
+  <script src="assets/usuarios.js"></script>
+</body>
+</html>

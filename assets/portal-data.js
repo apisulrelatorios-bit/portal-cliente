@@ -369,9 +369,26 @@
     }
   };
 
+  /* ---------------- Usuários do cliente (operador do tenant) ---------------- */
+
+  var equipe = {
+    listar: function (tenantId) { return rpc("listar_usuarios_do_cliente", { p_tenant: tenantId }); },
+    /* Operador só cria usuários do tipo Cliente, e só no cliente atual. */
+    criarCliente: function (tenantId, dados) {
+      return adminUsuarios("criar_usuario", {
+        nome: dados.nome, email: dados.email, username: dados.username, senha: dados.senha,
+        vinculos: [{ tenant_id: tenantId, papel: "cliente", pode_configurar: false }]
+      });
+    },
+    redefinirSenha: admin.redefinirSenha,
+    bloquear: admin.bloquear,
+    removerAcesso: admin.removerVinculo
+  };
+
   window.PortalData = {
     admin: admin,
     configuracao: configuracao,
+    equipe: equipe,
     client: client,
     getSession: getSession,
     signIn: signIn,

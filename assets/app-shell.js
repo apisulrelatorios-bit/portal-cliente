@@ -72,6 +72,7 @@
     file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>',
     cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>',
     sliders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>'
   };
 
@@ -123,6 +124,9 @@
     if (data.tenant && data.telas.sinistros !== false) {
       html += '<a data-module="sinistros" href="sinistros.html">' + ICONES_MODULO.file + '<span>Portal de Sinistros</span></a>';
     }
+    if (data.tenant && data.podeGerenciarUsuarios) {
+      html += '<a href="usuarios.html">' + ICONES_MODULO.users + '<span>Usuários</span></a>';
+    }
     if (data.tenant && data.podeConfigurar) {
       html += '<a href="configuracoes.html">' + ICONES_MODULO.sliders + '<span>Configurações</span></a>';
     }
@@ -140,6 +144,7 @@
     var bloqueada =
       (page === "admin.html" && !data.isAdmin) ||
       (page === "configuracoes.html" && !data.podeConfigurar) ||
+      (page === "usuarios.html" && !data.podeGerenciarUsuarios) ||
       (page !== "admin.html" && !data.tenant) ||
       (page === "dashboard.html" && data.telas.dashboard === false) ||
       (page === "sinistros.html" && data.telas.sinistros === false) ||
@@ -304,7 +309,7 @@
     var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
 
-    var internalPages = ["dashboard.html", "modulo.html", "sinistros.html", "admin.html", "configuracoes.html", "gr.html", "gl.html"];
+    var internalPages = ["dashboard.html", "modulo.html", "sinistros.html", "admin.html", "configuracoes.html", "usuarios.html", "gr.html", "gl.html"];
     var current = (currentPage() + window.location.search).toLowerCase();
 
     function isInternal(href) {
@@ -403,6 +408,8 @@
       photo: ctx.profile.foto_url || "",
       perfil: ctx.tenant ? ctx.tenant.papel : (isAdmin ? "admin" : ""),
       podeConfigurar: ctx.tenant ? ctx.tenant.pode_configurar : isAdmin,
+      /* Operador (e Admin dentro do cliente) libera acesso de usuários Cliente. */
+      podeGerenciarUsuarios: Boolean(ctx.tenant) && (isAdmin || ctx.tenant.papel === "operador"),
       tenant: ctx.tenant,
       tenants: ctx.tenants,
       modulos: ctx.modulos,
