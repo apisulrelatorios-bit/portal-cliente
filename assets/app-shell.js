@@ -134,6 +134,7 @@
       html += '<a class="nav-admin" href="admin.html">' + ICONES_MODULO.cog + '<span>Administração</span></a>';
     }
     nav.innerHTML = html;
+    markActiveNav(); /* o item ativo já nasce marcado (sem transição) */
   }
 
   /* Bloqueia telas desligadas/inexistentes e ajusta atalhos [data-module]
@@ -363,8 +364,18 @@
   var CACHE_PREFIXO = "portalShell:";
 
   function chaveCache(uid) {
-    var tenantId = window.PortalData.getActiveTenantId() || "";
+    var tenantId = "";
+    try { tenantId = window.localStorage.getItem("portalTenantId") || ""; } catch (_) {}
     return CACHE_PREFIXO + uid + ":" + (currentPage() === "admin.html" ? "plataforma" : tenantId);
+  }
+
+  /* Id do usuário da sessão salva pelo supabase-js (storageKey "portal-auth"),
+     lido de forma síncrona só para escolher o cache de exibição. */
+  function uidLocal() {
+    try {
+      var sessao = JSON.parse(window.localStorage.getItem("portal-auth") || "null");
+      return sessao && sessao.user ? sessao.user.id : null;
+    } catch (_) { return null; }
   }
 
   function lerCache(uid) {
@@ -404,14 +415,13 @@
     options = options || {};
     applyExternalBrandAssets();
 
-    /* Topo e menu imediatos a partir do cache da sessão (se houver). */
+    /* Topo e menu imediatos a partir do cache da sessão (se houver),
+       antes de qualquer espera — assim o menu nasce pronto, sem piscar. */
     var cacheMostrado = null;
-    if (window.PortalData) {
-      try {
-        var sessaoLocal = await window.PortalData.getSession();
-        var cache = sessaoLocal && lerCache(sessaoLocal.user.id);
-        if (cache) { renderChrome(cache); cacheMostrado = JSON.stringify(cache); }
-      } catch (_) {}
+    var uidSalvo = uidLocal();
+    var cache = uidSalvo && lerCache(uidSalvo);
+    if (cache) {
+      try { renderChrome(cache); cacheMostrado = JSON.stringify(cache); } catch (_) {}
     }
 
     if (!window.PortalData) {
