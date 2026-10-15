@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portal de Gestão & Performance</title>
+  <link rel="icon" type="image/png" href="https://repositorio-apisul.github.io/mondelez/icone-apisul.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/portal.css">
+  <link rel="stylesheet" href="css/client-brand.css">
+  <link rel="stylesheet" href="css/sidebar-user.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/modulo.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+  <div class="portal-shell">
+    <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="brand brand--apisul">
+        <img src="https://repositorio-apisul.github.io/mondelez/logo-apisul-branca.png" alt="Grupo Apisul">
+      </div>
+      <div class="side-label">Navegação</div>
+      <nav class="nav"></nav>
+      <div class="sidebar-actions">
+    <div class="sidebar-foot"><span>Ambiente corporativo</span><small>Versão da atualização 2.2</small></div>
+        <button class="logout-button" id="logout-button" type="button">↪ <span>Sair</span></button>
+      </div>
+    </aside>
+    <main class="main-content dashboard-page" id="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="client-badge" aria-label="Cliente atual">
+            <span class="client-icon logo-tile" id="client-logo"><span id="client-initial">A</span></span>
+            <div><small>Portal de Gestão &amp; Performance</small><strong id="client-name">Apisul</strong></div>
+          </div>
+        </div>
+        <div class="topbar-user" aria-label="Usuário autenticado">
+          <div class="topbar-user-avatar" id="topbar-user-avatar"><span>U</span></div>
+          <div><small>Usuário autenticado</small><strong id="topbar-user-name">Usuário</strong></div>
+        </div>
+      </header>
+
+      <nav class="breadcrumb" aria-label="Trilha de navegação">
+        <a href="dashboard.html">Visão geral</a><span>/</span><span aria-current="page" id="module-crumb">Módulo</span>
+      </nav>
+
+      <div class="gr-hero-banner gl-hero-banner">
+        <div class="hero-text-content">
+          <div class="hero-title-group">
+            <span class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.6 3.2 8.4 8 9 4.8-.6 8-4.4 8-9V6l-8-3Z"/><path d="m9.5 12 2 2 3.5-3.5"/></svg></span>
+            <h1 id="module-title">Carregando…</h1>
+          </div>
+          <p id="module-desc">Conteúdos do seu cliente organizados por aba, centralizados em um só lugar.</p>
+        </div>
+        <div class="hero-stats-container" id="hero-stats-container" hidden>
+          <div class="stat-card">
+            <span class="stat-label">Conteúdos exibidos</span>
+            <div class="stat-value" id="stat-total-count">0</div>
+            <span class="stat-badge" id="stat-filter-ratio">100% visíveis</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Por tipo de mídia</span>
+            <div class="stat-content-row">
+              <div class="donut-chart-mini" id="donut-chart-container"><span class="donut-chart-total">0</span></div>
+              <ul class="stat-legend" id="media-legend-container"></ul>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Por categoria</span>
+            <ul class="bars-chart-mini" id="category-bars-container"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="module-tabs" id="module-tabs" role="tablist" aria-label="Abas do módulo"></div>
+
+      <p class="page-footer-note">Portal de Gestão &amp; Performance</p>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="assets/portal-data.js"></script>
+  <script src="assets/app-shell.js"></script>
+  <script src="assets/content-funcional.js"></script>
+</body>
+</html>

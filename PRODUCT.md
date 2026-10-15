@@ -1,7 +1,7 @@
 # Portal de Gestão & Performance — Produto
 
 > Documento vivo. Define o que o produto é, quem usa, como os dados são organizados e em que ordem vamos construir.
-> Status: **em implementação** (fase 0 concluída) · Migrations em `supabase/migrations/` · Última revisão: 2026-10-14
+> Status: **em implementação** (fases 0, 1 e 2 concluídas) · Migrations em `supabase/migrations/` · Última revisão: 2026-10-14
 
 ---
 
@@ -276,8 +276,8 @@ Ponto a decidir: o processo semiautomático de cadastro de itens que o Everton v
 | Fase | Entrega |
 |---|---|
 | **0 — Fundação** ✅ | Schema, RLS, validação de itens, template "Padrão Apisul", tenant Mondelez com os 14 itens (Storage ainda pendente) |
-| **1 — Login e shell** | Login com e-mail ou usuário, seletor de tenant, menu dinâmico, cores do tenant |
-| **2 — GR / GL no Supabase** | Módulos → abas → visão em cards, lendo de `itens` (substitui o Power Automate) |
+| **1 — Login e shell** ✅ | Login com e-mail ou usuário, seletor de tenant, menu dinâmico (cores do tenant ainda pendentes) |
+| **2 — GR / GL no Supabase** ✅ | `modulo.html?m=<slug>`: abas → visão em cards, lendo de `itens`; gr.html/gl.html redirecionam |
 | **3 — Operação** | CRUD de itens pelo operador, gestão de usuários Cliente |
 | **4 — Configuração do tenant** | Editor de listas, colunas, opções, módulos, abas, telas e cores |
 | **5 — Console Admin** | Tenants, templates, operadores |

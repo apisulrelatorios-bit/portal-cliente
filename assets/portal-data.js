@@ -1,0 +1,299 @@
+/*
+ * portal-data.js
+ * Camada de dados do portal sobre o Supabase (substitui o Power Automate).
+ *
+ * - Login por e-mail ou usuário (Supabase Auth + RPC email_para_login)
+ * - Tenants do usuário e tenant ativo (localStorage "portalTenantId")
+ * - Módulos, abas e visões do tenant
+ * - Itens das listas, convertidos para os nomes de campo que os cards
+ *   (content-funcional.js / dashboard-funcional.js) já conhecem
+ *
+ * Toda a segurança está no banco (RLS). A chave abaixo é a chave pública
+ * (publishable) do projeto e pode ficar no front.
+ *
+ * Requer: @supabase/supabase-js (UMD) carregado antes deste arquivo.
+ */
+(function (window) {
+  "use strict";
+
+  var SUPABASE_URL = "https://hqxkqzhioilnrvmaylgy.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_DGDGvLlTO2YVVmEjsAzvpQ_73lIfJtH";
+  var TENANT_KEY = "portalTenantId";
+
+  if (!window.supabase || !window.supabase.createClient) {
+    console.error("[Portal] supabase-js não foi carregado.");
+    return;
+  }
+
+  var client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, storageKey: "portal-auth" }
+  });
+
+  function storageGet(key) {
+    try { return window.localStorage.getItem(key); } catch (_) { return null; }
+  }
+  function storageSet(key, value) {
+    try {
+      if (value === null || value === undefined) window.localStorage.removeItem(key);
+      else window.localStorage.setItem(key, value);
+    } catch (_) {}
+  }
+
+  function must(result) {
+    if (result.error) throw result.error;
+    return result.data;
+  }
+
+  /* ---------------- Autenticação ---------------- */
+
+  async function getSession() {
+    var res = await client.auth.getSession();
+    return res.data ? res.data.session : null;
+  }
+
+  async function signIn(login, senha) {
+    login = String(login || "").trim();
+    var email = login;
+    if (login.indexOf("@") === -1) {
+      var lookup = await client.rpc("email_para_login", { p_login: login });
+      if (lookup.error) throw lookup.error;
+      if (!lookup.data) return { error: "Usuário ou senha inválidos." };
+      email = lookup.data;
+    }
+    var res = await client.auth.signInWithPassword({ email: email, password: senha });
+    if (res.error) {
+      var msg = /invalid login credentials/i.test(res.error.message)
+        ? "Usuário ou senha inválidos."
+        : /email not confirmed/i.test(res.error.message)
+          ? "E-mail ainda não confirmado."
+          : res.error.message;
+      return { error: msg };
+    }
+    return { session: res.data.session };
+  }
+
+  async function signOut() {
+    try { await client.auth.signOut(); } catch (_) {}
+    storageSet(TENANT_KEY, null);
+  }
+
+  /* ---------------- Perfil e tenants ---------------- */
+
+  async function loadProfile(userId) {
+    return must(await client.from("profiles")
+      .select("id, nome, username, email, foto_url, is_platform_admin")
+      .eq("id", userId)
+      .maybeSingle()) || { id: userId, nome: "", is_platform_admin: false };
+  }
+
+  /* Tenants que o usuário pode abrir, com o papel dele em cada um.
+     Admin da plataforma vê todos os tenants ativos (o RLS libera). */
+  async function listTenants(profile) {
+    var memberships = must(await client.from("memberships")
+      .select("tenant_id, papel, pode_configurar")
+      .eq("user_id", profile.id)
+      .eq("ativo", true));
+    var byTenant = {};
+    memberships.forEach(function (m) { byTenant[m.tenant_id] = m; });
+
+    var tenants = must(await client.from("tenants")
+      .select("id, slug, nome, logo_url, tema, telas")
+      .eq("ativo", true)
+      .order("nome"));
+
+    return tenants
+      .filter(function (t) { return profile.is_platform_admin || byTenant[t.id]; })
+      .map(function (t) {
+        var m = byTenant[t.id];
+        t.papel = profile.is_platform_admin ? "admin" : m.papel;
+        t.pode_configurar = profile.is_platform_admin || Boolean(m && m.pode_configurar);
+        return t;
+      });
+  }
+
+  function getActiveTenantId() { return storageGet(TENANT_KEY); }
+  function setActiveTenantId(id) { storageSet(TENANT_KEY, id); }
+
+  /* ---------------- Contexto completo da página ---------------- */
+
+  async function loadContext() {
+    var session = await getSession();
+    if (!session) return { session: null };
+
+    var profile = await loadProfile(session.user.id);
+    var tenants = await listTenants(profile);
+    var stored = getActiveTenantId();
+    var tenant = tenants.filter(function (t) { return t.id === stored; })[0] ||
+      (tenants.length === 1 ? tenants[0] : null);
+    if (tenant) setActiveTenantId(tenant.id);
+
+    var modulos = [];
+    if (tenant) {
+      modulos = must(await client.from("modulos")
+        .select("id, slug, nome, icone, ordem")
+        .eq("tenant_id", tenant.id)
+        .eq("visivel", true)
+        .order("ordem"));
+    }
+
+    return {
+      session: session,
+      user: session.user,
+      profile: profile,
+      tenants: tenants,
+      tenant: tenant,
+      modulos: modulos
+    };
+  }
+
+  /* ---------------- Itens e visões ---------------- */
+
+  /* Rótulos das opções de escolha, por lista e chave de coluna:
+     { lista_id: { chave: { valor: rotulo } } } */
+  async function loadOptionLabels(tenantId) {
+    var colunas = must(await client.from("colunas")
+      .select("id, lista_id, chave")
+      .eq("tenant_id", tenantId));
+    var opcoes = must(await client.from("coluna_opcoes")
+      .select("coluna_id, valor, rotulo")
+      .eq("tenant_id", tenantId));
+    var colById = {};
+    colunas.forEach(function (c) { colById[c.id] = c; });
+    var map = {};
+    opcoes.forEach(function (o) {
+      var col = colById[o.coluna_id];
+      if (!col || !o.rotulo) return;
+      map[col.lista_id] = map[col.lista_id] || {};
+      map[col.lista_id][col.chave] = map[col.lista_id][col.chave] || {};
+      map[col.lista_id][col.chave][o.valor] = o.rotulo;
+    });
+    return map;
+  }
+
+  /* Converte uma linha de "itens" para os nomes de campo do contrato antigo
+     (SharePoint/Power Automate), que os cards e a dashboard já leem. */
+  function toCardItem(row, labels) {
+    var d = row.dados || {};
+    var rot = (labels[row.lista_id] || {});
+    var tipo = d.tipo_midia || "";
+    var item = {
+      Id: row.id,
+      ListaId: row.lista_id,
+      Title: d.titulo || "",
+      Vertente: Array.isArray(d.vertente) ? d.vertente.join(", ") : (d.vertente || ""),
+      Categoria: d.categoria || "",
+      Tema: d.tema || "",
+      TipoMidia: tipo,
+      Descricao: d.descricao || "",
+      OrdemExibicao: d.ordem_exibicao === undefined ? 9999 : d.ordem_exibicao,
+      UrlLink: d.url_link || "",
+      Link_thumbnail: d.thumbnail || "",
+      Ativo: d.ativo === undefined ? true : d.ativo,
+      Modified: row.updated_at,
+      Created: row.created_at
+    };
+    item.__midiaRotulo = (rot.tipo_midia && rot.tipo_midia[tipo]) || "";
+    item.__dados = d;
+    return item;
+  }
+
+  async function loadTenantItems(tenantId) {
+    var rows = must(await client.from("itens")
+      .select("id, lista_id, dados, created_at, updated_at")
+      .eq("tenant_id", tenantId));
+    var labels = await loadOptionLabels(tenantId);
+    return rows.map(function (row) { return toCardItem(row, labels); });
+  }
+
+  function matchesFilter(dados, f) {
+    var v = dados[f.coluna];
+    switch (f.op) {
+      case "igual":
+        if (f.valor === true || f.valor === false) return (v === undefined ? true : v) === f.valor;
+        return v === f.valor;
+      case "diferente":
+        return v !== f.valor;
+      case "contem":
+        if (Array.isArray(v)) return v.indexOf(f.valor) !== -1;
+        return String(v || "").toLowerCase().indexOf(String(f.valor).toLowerCase()) !== -1;
+      case "vazio":
+        return v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length);
+      case "preenchido":
+        return !(v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length));
+      default:
+        return true;
+    }
+  }
+
+  function compare(a, b) {
+    if (a === b) return 0;
+    if (a === undefined || a === null) return 1;
+    if (b === undefined || b === null) return -1;
+    if (typeof a === "number" && typeof b === "number") return a - b;
+    return String(a).localeCompare(String(b), "pt-BR", { numeric: true, sensitivity: "base" });
+  }
+
+  /* Aplica a configuração de uma visão (filtros + ordenação) aos itens. */
+  function applyView(items, config, listaId) {
+    config = config || {};
+    var filtros = config.filtros || [];
+    var ordem = config.ordenar_por || [];
+    return items
+      .filter(function (item) {
+        if (listaId && item.ListaId !== listaId) return false;
+        return filtros.every(function (f) { return matchesFilter(item.__dados, f); });
+      })
+      .sort(function (a, b) {
+        for (var i = 0; i < ordem.length; i++) {
+          var c = compare(a.__dados[ordem[i].coluna], b.__dados[ordem[i].coluna]);
+          if (c !== 0) return ordem[i].direcao === "desc" ? -c : c;
+        }
+        return 0;
+      });
+  }
+
+  /* Módulo com as abas visíveis e os itens de cada aba já filtrados. */
+  async function loadModule(tenantId, slug, items) {
+    var modulo = must(await client.from("modulos")
+      .select("id, slug, nome, icone")
+      .eq("tenant_id", tenantId)
+      .eq("slug", slug)
+      .eq("visivel", true)
+      .maybeSingle());
+    if (!modulo) return null;
+
+    var abas = must(await client.from("abas")
+      .select("id, nome, ordem, visao:visoes(id, lista_id, config)")
+      .eq("modulo_id", modulo.id)
+      .eq("visivel", true)
+      .order("ordem"));
+
+    modulo.abas = abas.map(function (aba) {
+      var visao = aba.visao || {};
+      var config = visao.config || {};
+      return {
+        id: aba.id,
+        nome: aba.nome,
+        agruparPor: (config.agrupar_por || [])[0] || null,
+        exibicao: config.exibicao || "cards",
+        itens: visao.lista_id ? applyView(items, config, visao.lista_id) : []
+      };
+    });
+    return modulo;
+  }
+
+  window.PortalData = {
+    client: client,
+    getSession: getSession,
+    signIn: signIn,
+    signOut: signOut,
+    loadContext: loadContext,
+    listTenants: listTenants,
+    loadProfile: loadProfile,
+    getActiveTenantId: getActiveTenantId,
+    setActiveTenantId: setActiveTenantId,
+    loadTenantItems: loadTenantItems,
+    loadModule: loadModule,
+    applyView: applyView
+  };
+})(window);

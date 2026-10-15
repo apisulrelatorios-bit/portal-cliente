@@ -1,17 +1,19 @@
 /*
  * Conteúdo dinâmico do Portal
  *
- * Contrato oficial do Power Automate:
- *   itensPortal[] -> Vertente -> Categoria -> Tema -> card
+ * Os itens vêm do Supabase (assets/portal-data.js) já convertidos para os
+ * nomes de campo do contrato antigo (Title, Categoria, Tema, TipoMidia...).
  *
- * A página (GR, GL ou Sinistros) é definida pela Vertente. Categoria e Tema
- * não criam novas páginas: são seções e subtítulos dentro da página atual.
+ * modulo.html?m=<slug>: abas do módulo; cada aba mostra os itens da sua
+ * visão, agrupados pela coluna "agrupar_por" da visão (ex.: Tema).
+ * gr.html / gl.html redirecionam para modulo.html.
  */
 (function () {
   "use strict";
 
   var PAGE = {
     "dashboard.html": "DASHBOARD",
+    "modulo.html": "MODULO",
     "gr.html": "GR",
     "gl.html": "GL",
     "sinistros.html": "SINISTROS"
@@ -57,6 +59,7 @@
 
   function pageVertente() {
     var file = (window.location.pathname.split("/").pop() || "").toLowerCase();
+    if (file && file.indexOf(".") === -1) file += ".html"; /* URLs limpas (/modulo) */
     return PAGE[file] || "";
   }
 
@@ -228,6 +231,7 @@
   var EXPAND_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 
   function mediaLabel(item, type) {
+    if (item.__midiaRotulo) return item.__midiaRotulo;
     return value(item, ["TipoMídia", "TipoMidia", "Tipo de Mídia", "Tipo de Midia", "Midia", "Mídia"]) || type;
   }
 
@@ -333,36 +337,138 @@
   function renderDynamicContent(data) {
     var current = pageVertente();
     /* A Dashboard (Visão Geral) não recebe mais o dump completo de todas as
-       seções/filtros de GR+GL+Sinistros: ela tem seu próprio painel executivo
+       seções/filtros: ela tem seu próprio painel executivo
        (ver assets/dashboard-funcional.js), que reaproveita os helpers deste
        arquivo via window.PortalContent em vez de duplicar a lógica. */
-    if (current === "DASHBOARD") return;
-    var source = Array.isArray(data.itensPortal) ? data.itensPortal : [];
-    var items = source.filter(function (item) {
-      return isActive(item) && matchesVertente(value(item, ["Vertente", "vertente", "VertentePortal", "Vertente do Portal"]), current);
-    });
-    if (!items.length) {
-      console.info("[Portal] Nenhum item do SharePoint para a vertente " + current + ". Itens recebidos:", source.length);
+    if (current === "DASHBOARD" || current === "SINISTROS") return;
+    if (current === "MODULO") { renderModule(data.modulo); return; }
+  }
+
+  /* Agrupamento padrão: seção = Categoria, subtítulo = Tema. */
+  function groupByCategoryAndTheme(item) {
+    return {
+      section: value(item, ["Categoria", "categoria"]) || "Conteúdos",
+      theme: value(item, ["Tema", "tema"]) || "Geral"
+    };
+  }
+
+  /* Nomes de coluna da lista → campo equivalente no item do card. */
+  var CARD_FIELD = { categoria: "Categoria", tema: "Tema", tipo_midia: "TipoMidia", titulo: "Title" };
+
+  function groupByColumn(coluna) {
+    return function (item) {
+      var raw = item.__dados ? item.__dados[coluna] : item[CARD_FIELD[coluna] || coluna];
+      if (Array.isArray(raw)) raw = raw.join(", ");
+      return { section: text(raw) || "Geral", theme: null };
+    };
+  }
+
+  /* ---------- Página de módulo: abas → visão em cards ---------- */
+  function renderModule(modulo) {
+    var main = document.querySelector("#main-content");
+    if (!main || !modulo) return;
+
+    var title = document.getElementById("module-title");
+    var crumb = document.getElementById("module-crumb");
+    if (title) title.textContent = modulo.nome;
+    if (crumb) crumb.textContent = modulo.nome;
+    var footer = main.querySelector(".page-footer-note");
+    if (footer) footer.textContent = "Portal de Gestão & Performance · " + modulo.nome;
+    document.title = modulo.nome + " | " + document.title.replace(/^.*?\|\s*/, "");
+
+    var abas = modulo.abas || [];
+    var tabsEl = document.getElementById("module-tabs");
+    if (!abas.length) {
+      if (tabsEl) tabsEl.hidden = true;
+      renderEmptyPanel(main, "Este módulo ainda não tem abas configuradas.");
       return;
     }
 
-    items.sort(function (a, b) { return Number(a.OrdemExibicao || a.ordemExibicao || 9999) - Number(b.OrdemExibicao || b.ordemExibicao || 9999); });
+    var params = new URLSearchParams(window.location.search);
+    var inicial = abas.filter(function (a) { return a.id === params.get("aba"); })[0] ||
+      abas.filter(function (a) { return a.itens.length; })[0] || abas[0];
+
+    if (tabsEl) {
+      tabsEl.innerHTML = abas.map(function (aba) {
+        return '<button type="button" class="module-tab" role="tab" data-aba="' + escapeHTML(aba.id) + '" aria-selected="false">' +
+          escapeHTML(aba.nome) + '<span class="module-tab-count">' + aba.itens.length + '</span></button>';
+      }).join("");
+      tabsEl.addEventListener("click", function (event) {
+        var btn = event.target.closest(".module-tab");
+        if (!btn) return;
+        var aba = abas.filter(function (a) { return a.id === btn.getAttribute("data-aba"); })[0];
+        if (aba) selectTab(aba, true);
+      });
+      tabsEl.addEventListener("keydown", function (event) {
+        if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+        var tabs = Array.prototype.slice.call(tabsEl.querySelectorAll(".module-tab"));
+        var idx = tabs.indexOf(document.activeElement);
+        if (idx === -1) return;
+        var next = tabs[(idx + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length];
+        next.focus();
+        next.click();
+      });
+    }
+
+    function selectTab(aba, updateUrl) {
+      if (tabsEl) {
+        tabsEl.querySelectorAll(".module-tab").forEach(function (btn) {
+          var active = btn.getAttribute("data-aba") === aba.id;
+          btn.classList.toggle("is-active", active);
+          btn.setAttribute("aria-selected", String(active));
+          btn.tabIndex = active ? 0 : -1;
+        });
+      }
+      if (updateUrl && window.history.replaceState) {
+        var url = new URL(window.location.href);
+        url.searchParams.set("aba", aba.id);
+        window.history.replaceState(null, "", url.toString());
+      }
+      var itens = aba.itens.filter(isActive);
+      if (!itens.length) {
+        renderEmptyPanel(main, "Nenhum conteúdo publicado em " + aba.nome + " ainda.");
+        return;
+      }
+      renderItems(main, itens, aba.agruparPor ? groupByColumn(aba.agruparPor) : groupByCategoryAndTheme);
+    }
+
+    selectTab(inicial, false);
+  }
+
+  function clearDynamic(main) {
+    main.querySelectorAll(".portal-dynamic-content, .content-cards, .content-section, .filter-bar-row, .filter-bar, .content-grid, .empty-panel")
+      .forEach(function (node) { node.remove(); });
+  }
+
+  function renderEmptyPanel(main, message) {
+    clearDynamic(main);
+    var stats = document.getElementById("hero-stats-container");
+    if (stats) stats.hidden = true;
+    var root = document.createElement("div");
+    root.className = "portal-dynamic-content";
+    root.innerHTML = '<div class="empty-state"><span class="empty-state-icon">' + ICONS.default + '</span>' +
+      '<h3>Nada por aqui</h3><p>' + escapeHTML(message) + '</p></div>';
+    main.insertBefore(root, main.querySelector(".page-footer-note") || null);
+  }
+
+  /* Renderiza seções de cards + barra de filtros/busca para uma lista de itens.
+     groupFn(item) → { section, theme } (theme null = sem subtítulo). */
+  function renderItems(main, items, groupFn) {
+    items = items.slice().sort(function (a, b) { return Number(a.OrdemExibicao || a.ordemExibicao || 9999) - Number(b.OrdemExibicao || b.ordemExibicao || 9999); });
     var groups = {};
+    var groupOrder = [];
     items.forEach(function (item) {
-      var category = value(item, ["Categoria", "categoria", "CategoriaPortal", "Categoria do Portal"]) || "Conteúdos";
-      var theme = value(item, ["Tema", "tema", "TemaPortal", "Tema do Portal"]) || "Geral";
+      var g = groupFn(item);
+      var category = g.section;
+      var theme = g.theme || "";
       var categoryKey = key(category);
-      groups[categoryKey] = groups[categoryKey] || { label: category, themes: {} };
+      if (!groups[categoryKey]) { groups[categoryKey] = { label: category, themes: {} }; groupOrder.push(categoryKey); }
       groups[categoryKey].themes[key(theme)] = groups[categoryKey].themes[key(theme)] || { label: theme, items: [] };
       groups[categoryKey].themes[key(theme)].items.push(item);
     });
 
-    var main = document.querySelector("#main-content");
-    if (!main) return;
-    /* Remove de vez o conteúdo estático legado (barra de filtro antiga do
-       protótipo, cards de demonstração etc.) em vez de apenas escondê-lo. */
-    var oldSections = main.querySelectorAll(".content-cards, .content-section, .filter-bar-row, .filter-bar, .content-grid, .empty-panel");
-    oldSections.forEach(function (node) { node.remove(); });
+    /* Remove o conteúdo anterior (aba anterior ou protótipo estático). */
+    clearDynamic(main);
 
     var root = document.createElement("div");
     root.className = "portal-dynamic-content";
@@ -406,13 +512,14 @@
       '</div>';
     root.insertAdjacentHTML("beforeend", toolbarAndPanelHTML);
 
-    Object.keys(groups).forEach(function (groupKey) {
+    groupOrder.forEach(function (groupKey) {
       var group = groups[groupKey];
       var total = Object.keys(group.themes).reduce(function (sum, themeKey) { return sum + group.themes[themeKey].items.length; }, 0);
       var section = '<section class="content-section" data-category="' + groupKey + '" aria-label="' + escapeHTML(group.label) + '"><div class="content-section-head"><span class="content-section-icon">' + ICONS.default + '</span><h2>' + escapeHTML(group.label) + '</h2><span class="content-section-count">' + total + (total === 1 ? ' item' : ' itens') + '</span></div>';
       Object.keys(group.themes).forEach(function (themeKey) {
         var theme = group.themes[themeKey];
-        section += '<div class="portal-theme" data-theme="' + themeKey + '"><h3 class="portal-theme-title">' + escapeHTML(theme.label) + '</h3><div class="media-grid">' + theme.items.map(function (item) { return card(item, group.label, theme.label, groupKey, themeKey); }).join("") + '</div></div>';
+        var themeTitle = theme.label ? '<h3 class="portal-theme-title">' + escapeHTML(theme.label) + '</h3>' : '';
+        section += '<div class="portal-theme" data-theme="' + themeKey + '">' + themeTitle + '<div class="media-grid">' + theme.items.map(function (item) { return card(item, group.label, theme.label || group.label, groupKey, themeKey); }).join("") + '</div></div>';
       });
       root.insertAdjacentHTML("beforeend", section + '</section>');
     });
@@ -680,8 +787,7 @@
     initModalTriggers: initModalTriggers
   };
 
-  document.addEventListener("DOMContentLoaded", function () {
-    var data = window.PortalShell && window.PortalShell.readSessionData ? window.PortalShell.readSessionData() : { itensPortal: [] };
-    renderDynamicContent(data);
-  });
+  if (window.PortalShell && window.PortalShell.onReady) {
+    window.PortalShell.onReady(renderDynamicContent);
+  }
 })();

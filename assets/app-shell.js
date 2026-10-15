@@ -3,13 +3,14 @@
  * Núcleo reutilizável do "chrome" interno do portal (sidebar, topbar,
  * identidade do cliente/usuário, logout, menu mobile, navegação ativa).
  *
- * Mantém EXATAMENTE o mesmo contrato de sessão já validado:
- * - chaves de sessão: portalUsuario / portalAutenticado
- * - fallback de compatibilidade: localStorage "nome"
- * - redireciona para index.html quando não autenticado
- * - logout limpa as mesmas chaves e volta para index.html
+ * Sessão e dados vêm do Supabase (assets/portal-data.js):
+ * - sem sessão válida → index.html
+ * - sem tenant escolhido → index.html?trocar=1 (seletor de cliente)
+ * - menu montado a partir dos módulos visíveis do tenant + telas ligadas
+ * - logout encerra a sessão no Supabase e volta para index.html
+ * - ao terminar, dispara o evento "portal:ready" com os dados da página
  *
- * Usado por: dashboard.html, gr.html, gl.html, sinistros.html
+ * Usado por: dashboard.html, modulo.html, sinistros.html
  */
 (function (window, document) {
   "use strict";
@@ -51,144 +52,92 @@
     return url;
   }
 
-  function plain(value) {
-    if (!value) return "";
-    if (Array.isArray(value)) return plain(value[0]);
-    if (typeof value === "string") {
-      try { return plain(JSON.parse(value)); } catch (_) { return value.trim(); }
-    }
-    if (typeof value === "object") {
-      if (Array.isArray(value.results)) return plain(value.results[0]);
-      return plain(
-        value.Url || value.url || value.Value || value.value ||
-        value.serverUrl || value.originalImageUrl || value.absoluteUrl ||
-        value.serverRelativeUrl || value.ServerRelativeUrl ||
-        value.link || value.href
-      );
-    }
-    return "";
-  }
-
-  function logoUrl(value) {
-    if (!value) return "";
-    if (Array.isArray(value)) return logoUrl(value[0]);
-    if (typeof value === "string") {
-      try { return logoUrl(JSON.parse(value)); } catch (_) { return resolveUrl(value); }
-    }
-    if (typeof value === "object") {
-      var host = value.serverUrl || value.ServerUrl || value.webUrl || value.WebUrl || "";
-      var path = value.serverRelativeUrl || value.ServerRelativeUrl || value.relativeUrl || "";
-      if (host && path) return String(host).replace(/\/$/, "") + (String(path).charAt(0) === "/" ? path : "/" + path);
-      return logoUrl(value.originalImageUrl || value.absoluteUrl || value.Url || value.url || value.Value || value.value || value.link || value.href || path || host);
-    }
-    return "";
-  }
+  /* Estado da página, preenchido por init() a partir do Supabase. */
+  var state = null;
 
   function readSessionData() {
-    var user = {};
-    try { user = JSON.parse(sessionStorage.getItem("portalUsuario") || "{}"); } catch (_) {}
-    var authenticated = sessionStorage.getItem("portalAutenticado") === "true" || Boolean(localStorage.getItem("nome"));
-    var response = user.body && typeof user.body === "object" ? user.body : {};
-    // Compatibilidade para sessões que possam ter sido salvas com o envelope
-    // original do Power Automate, inclusive body em formato de texto JSON.
-    if (typeof user.body === "string") {
-      try { response = JSON.parse(user.body); } catch (_) { response = {}; }
-    }
-
-    function first(keys) {
-      for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        var found = plain(user[key]) || plain(response[key]) || plain(localStorage.getItem(key)) || plain(sessionStorage.getItem(key));
-        if (found) return found;
-      }
-      return "";
-    }
-
-    function firstLogo(keys) {
-      for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        var found = logoUrl(user[key]) || logoUrl(response[key]) || logoUrl(localStorage.getItem(key)) || logoUrl(sessionStorage.getItem(key));
-        if (found) return found;
-      }
-      return "";
-    }
-
-    function normalizeVertente(value) {
-      if (value && typeof value === "object") value = value.Value || value.value || "";
-      return String(value || "").trim().toUpperCase();
-    }
-
-    return {
-      authenticated: authenticated,
-      name: first(["nome", "nomeUsuario", "userName", "usuarioNome"]) || user.login || "Usuário",
-      client: first(["cliente", "nomeCliente", "clienteNome", "clientName"]) || "Cliente",
-      clientLogo: firstLogo(["logoCliente", "LogoCliente", "clienteLogo", "logoUrl", "clientLogo", "logo", "Logo"]),
-      photo: user.foto || localStorage.getItem("foto") || "",
-      vertente: normalizeVertente(user.vertente || response.vertente || sessionStorage.getItem("vertente") || localStorage.getItem("vertente")),
-      perfil: first(["perfil"]) || "",
-      itensPortal: readPortalItems(
-        user.itensPortal || response.itensPortal || user.conteudosPortal || response.conteudosPortal ||
-        user.itens || response.itens || sessionStorage.getItem("itensPortal")
-      ),
-      itensProcessos: readProcessItems(
-        user.itensProcessos || response.itensProcessos || sessionStorage.getItem("itensProcessos")
-      )
+    return state || {
+      authenticated: false, name: "Usuário", client: "Cliente", clientLogo: "",
+      photo: "", perfil: "", modulos: [], telas: {}, tenants: [],
+      itensPortal: [], itensProcessos: []
     };
   }
 
-  function readPortalItems(value) {
-    if (Array.isArray(value)) return value;
-    if (typeof value === "string") {
-      try { return readPortalItems(JSON.parse(value)); } catch (_) { return []; }
-    }
-    if (value && typeof value === "object") {
-      var keys = ["itensPortal", "conteudosPortal", "itens", "value", "results", "body"];
-      for (var i = 0; i < keys.length; i++) {
-        if (value[keys[i]] !== undefined) {
-          var list = readPortalItems(value[keys[i]]);
-          if (list.length) return list;
-        }
-      }
-    }
-    return [];
+  var ICONES_MODULO = {
+    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.6 3.2 8.4 8 9 4.8-.6 8-4.4 8-9V6l-8-3Z"/><path d="m9.5 12 2 2 3.5-3.5"/></svg>',
+    truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v8H3z"/><path d="M14 10h4l3 3v2h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>',
+    home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1v-9"/></svg>',
+    file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>',
+    grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>'
+  };
+
+  function moduleIcon(name) { return ICONES_MODULO[name] || ICONES_MODULO.grid; }
+
+  function moduleHref(slug) { return "modulo.html?m=" + encodeURIComponent(slug); }
+
+  /* Nome da página com ".html", mesmo quando o servidor usa URLs limpas (/modulo). */
+  function currentPage() {
+    var page = (window.location.pathname.split("/").pop() || "dashboard.html").toLowerCase();
+    return page.indexOf(".") === -1 ? page + ".html" : page;
   }
 
-  function readProcessItems(value) {
-    if (Array.isArray(value)) return value;
-    if (typeof value === "string") {
-      try { return readProcessItems(JSON.parse(value)); } catch (_) { return []; }
-    }
-    if (value && typeof value === "object") {
-      var keys = ["itensProcessos", "processos", "itemsProcessos", "value", "results", "body"];
-      for (var i = 0; i < keys.length; i++) {
-        if (value[keys[i]] !== undefined) {
-          var list = readProcessItems(value[keys[i]]);
-          if (list.length || Array.isArray(value[keys[i]])) return list;
-        }
-      }
-    }
-    return [];
+  function currentModuleSlug() {
+    return new URLSearchParams(window.location.search).get("m") || "";
   }
 
-  function allowedModules(vertente) {
-    if (vertente === "GR") return ["gr", "sinistros"];
-    if (vertente === "GL") return ["gl"];
-    if (vertente === "AMBOS") return ["gr", "gl", "sinistros"];
-    return [];
+  function escapeAttr(value) {
+    return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
+  function homePage(data) {
+    if (data.telas.dashboard !== false) return "dashboard.html";
+    if (data.modulos.length) return moduleHref(data.modulos[0].slug);
+    if (data.telas.sinistros !== false) return "sinistros.html";
+    return "dashboard.html";
+  }
+
+  /* Monta o menu lateral: Visão geral + módulos do tenant + Sinistros. */
+  function buildNav(data) {
+    var nav = document.querySelector(".nav");
+    if (!nav) return;
+    var html = "";
+    if (data.telas.dashboard !== false) {
+      html += '<a href="dashboard.html">' + ICONES_MODULO.home + '<span>Visão geral</span></a>';
+    }
+    data.modulos.forEach(function (m) {
+      html += '<a data-module="' + escapeAttr(m.slug) + '" href="' + moduleHref(m.slug) + '">' + moduleIcon(m.icone) + '<span>' + escapeAttr(m.nome) + '</span></a>';
+    });
+    if (data.telas.sinistros !== false) {
+      html += '<a data-module="sinistros" href="sinistros.html">' + ICONES_MODULO.file + '<span>Portal de Sinistros</span></a>';
+    }
+    nav.innerHTML = html;
+  }
+
+  /* Bloqueia telas desligadas/inexistentes e ajusta atalhos [data-module]
+     (cards da dashboard) para os módulos que o tenant realmente tem. */
   function applyModuleAccess(data) {
-    var allowed = allowedModules(data.vertente);
-    var current = (window.location.pathname.split("/").pop() || "dashboard.html").toLowerCase();
-    var currentModule = { "gr.html": "gr", "gl.html": "gl", "sinistros.html": "sinistros" }[current];
-
-    if (currentModule && allowed.indexOf(currentModule) === -1) {
-      window.location.replace("dashboard.html");
-      return false;
+    var page = currentPage();
+    var slugs = data.modulos.map(function (m) { return m.slug; });
+    var bloqueada =
+      (page === "dashboard.html" && data.telas.dashboard === false) ||
+      (page === "sinistros.html" && data.telas.sinistros === false) ||
+      (page === "modulo.html" && (slugs.indexOf(currentModuleSlug()) === -1 || !data.modulo));
+    if (bloqueada) {
+      var destino = homePage(data);
+      if (destino.toLowerCase() !== page) {
+        window.location.replace(destino);
+        return false;
+      }
     }
 
     document.querySelectorAll("[data-module]").forEach(function (element) {
-      element.hidden = allowed.indexOf(element.getAttribute("data-module")) === -1;
+      var slug = element.getAttribute("data-module");
+      if (slug === "sinistros") {
+        element.hidden = data.telas.sinistros === false;
+        return;
+      }
+      element.hidden = slugs.indexOf(slug) === -1;
+      if (element.tagName === "A" && !element.closest(".nav")) element.setAttribute("href", moduleHref(slug));
     });
     return true;
   }
@@ -268,17 +217,19 @@
   function bindLogout() {
     var btn = document.getElementById("logout-button");
     if (!btn) return;
-    btn.addEventListener("click", function () {
+    btn.addEventListener("click", async function () {
+      btn.disabled = true;
       LOGOUT_KEYS.forEach(function (key) {
         localStorage.removeItem(key);
         sessionStorage.removeItem(key);
       });
+      if (window.PortalData) await window.PortalData.signOut();
       window.location.assign("index.html");
     });
   }
 
   function markActiveNav() {
-    var current = (window.location.pathname.split("/").pop() || "dashboard.html").toLowerCase();
+    var current = (currentPage() + (currentPage() === "modulo.html" ? "?m=" + encodeURIComponent(currentModuleSlug()) : "")).toLowerCase();
     var links = document.querySelectorAll(".nav a");
     links.forEach(function (link) {
       var href = (link.getAttribute("href") || "").toLowerCase();
@@ -329,8 +280,8 @@
     var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
 
-    var internalPages = ["dashboard.html", "gr.html", "gl.html", "sinistros.html"];
-    var current = (window.location.pathname.split("/").pop() || "dashboard.html").toLowerCase();
+    var internalPages = ["dashboard.html", "modulo.html", "sinistros.html", "gr.html", "gl.html"];
+    var current = (currentPage() + window.location.search).toLowerCase();
 
     function isInternal(href) {
       if (!href) return false;
@@ -351,7 +302,7 @@
       if (!anchor) return;
       var href = anchor.getAttribute("href");
       if (!isInternal(href)) return;
-      var targetPage = href.split("?")[0].split("#")[0].toLowerCase();
+      var targetPage = href.split("#")[0].toLowerCase();
       if (targetPage === current) {
         event.preventDefault();
         return;
@@ -363,34 +314,96 @@
     }, true);
   }
 
-  function init(options) {
+  /* Troca de cliente para quem tem acesso a mais de um tenant. */
+  function addTenantSwitch(data) {
+    if (data.tenants.length < 2) return;
+    var badge = document.querySelector(".client-badge");
+    if (!badge || badge.querySelector(".tenant-switch")) return;
+    var link = document.createElement("a");
+    link.className = "tenant-switch";
+    link.href = "index.html?trocar=1";
+    link.textContent = "Trocar cliente";
+    badge.appendChild(link);
+  }
+
+  async function init(options) {
     options = options || {};
     applyExternalBrandAssets();
-    var data = readSessionData();
 
-    if (!data.authenticated) {
+    if (!window.PortalData) {
+      console.error("[Portal] PortalData indisponível — verifique os scripts da página.");
       window.location.replace("index.html");
       return null;
     }
 
-    if (!applyModuleAccess(data)) return null;
+    var ctx;
+    try {
+      ctx = await window.PortalData.loadContext();
+    } catch (error) {
+      console.error("[Portal] Falha ao carregar a sessão:", error);
+      window.location.replace("index.html");
+      return null;
+    }
+    if (!ctx.session) {
+      window.location.replace("index.html");
+      return null;
+    }
+    if (!ctx.tenant) {
+      window.location.replace("index.html?trocar=1");
+      return null;
+    }
 
-    var rawUser = {};
-    try { rawUser = JSON.parse(sessionStorage.getItem("portalUsuario") || "{}"); } catch (_) {}
-    console.info(
-      "[Portal] logoCliente bruto (retorno do Power Automate):", rawUser.logoCliente,
-      "\n[Portal] logoCliente resolvido para uso em <img>:", data.clientLogo || "(vazio)"
-    );
+    var items = [];
+    try {
+      items = await window.PortalData.loadTenantItems(ctx.tenant.id);
+    } catch (error) {
+      console.error("[Portal] Falha ao carregar os itens do tenant:", error);
+    }
 
-    populateIdentity(data);
+    state = {
+      authenticated: true,
+      name: ctx.profile.nome || ctx.profile.username || ctx.user.email || "Usuário",
+      client: ctx.tenant.nome,
+      clientLogo: resolveUrl(ctx.tenant.logo_url || ""),
+      photo: ctx.profile.foto_url || "",
+      perfil: ctx.tenant.papel,
+      podeConfigurar: ctx.tenant.pode_configurar,
+      tenant: ctx.tenant,
+      tenants: ctx.tenants,
+      modulos: ctx.modulos,
+      telas: ctx.tenant.telas || {},
+      itensPortal: items,
+      itensProcessos: []
+    };
+
+    if (currentPage() === "modulo.html") {
+      try {
+        state.modulo = await window.PortalData.loadModule(ctx.tenant.id, currentModuleSlug(), items);
+      } catch (error) {
+        console.error("[Portal] Falha ao carregar o módulo:", error);
+      }
+    }
+
+    buildNav(state);
+    if (!applyModuleAccess(state)) return null;
+
+    populateIdentity(state);
+    addTenantSwitch(state);
     bindLogout();
     markActiveNav();
     bindMobileMenu();
     bindPageTransitions();
 
     document.documentElement.classList.add("session-ready");
-    if (typeof options.onReady === "function") options.onReady(data);
-    return data;
+    if (typeof options.onReady === "function") options.onReady(state);
+    document.dispatchEvent(new CustomEvent("portal:ready", { detail: state }));
+    return state;
+  }
+
+  /* Executa fn assim que os dados da página estiverem prontos. */
+  function onReady(fn) {
+    if (state && state.authenticated) { fn(state); return; }
+    document.addEventListener("portal:ready", function (event) { fn(event.detail); }, { once: true });
   }
 
   function applyExternalBrandAssets() {
@@ -409,7 +422,8 @@
   window.PortalShell = {
     init: init,
     readSessionData: readSessionData,
-    allowedModules: allowedModules,
+    onReady: onReady,
+    moduleHref: moduleHref,
     getPortalItems: function () { return readSessionData().itensPortal; },
     getProcessItems: function () { return readSessionData().itensProcessos; }
   };
