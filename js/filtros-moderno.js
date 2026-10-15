@@ -32,7 +32,7 @@ class FiltrosModerno {
       <div class="filtros-container">
         <div class="filtros-header">
           <div class="filtros-header-left">
-            <button class="filtros-toggle" id="filtros-toggle" type="button">
+            <button class="filtros-toggle ativo" id="filtros-toggle" type="button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
               </svg>
