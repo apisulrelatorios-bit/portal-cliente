@@ -25,7 +25,7 @@ Substitui o modelo atual (Power Automate + listas no site `SinistrosApisul` do S
 
 | Perfil | Escopo | Pode fazer |
 |---|---|---|
-| **Admin** (Apisul) | Plataforma inteira | Cria e desativa tenants (contas). Cria operadores e clientes em qualquer tenant. Define o template inicial de cada tenant. Vê tudo. |
+| **Admin** (Apisul) | Plataforma inteira | Usa **só a Administração**: cria e desativa tenants (contas), cria operadores e clientes em qualquer tenant, define o template inicial. **Não entra nos portais dos clientes**, a menos que também tenha vínculo com o cliente. |
 | **Operador** | Um ou mais tenants | Cadastra, edita e remove itens das listas. Libera acesso para usuários do tipo **Cliente**. Se tiver a permissão *"Pode configurar o tenant"*: cria e edita listas, colunas, opções de escolha, módulos, abas, cores e visibilidade de telas. |
 | **Cliente** | Um ou mais tenants | Só visualiza os módulos e abas visíveis do tenant. |
 
@@ -308,3 +308,4 @@ Ponto a decidir: o processo semiautomático de cadastro de itens que o Everton v
 | 11 | Thumbnails semiautomáticos: imagem, PDF e vídeo automáticos; Power BI, site e Office manuais (print + upload); sem serviço pago; só Supabase Storage |
 | 12 | Template "Padrão Apisul" = planilha padrão; tenants novos nascem sem itens, salvo pedido explícito |
 | 13 | Identidade (nome e logo) é configurada **dentro do cliente**, em `configuracoes.html`, pelo operador com "pode configurar". O Admin só dá o nome inicial; a Administração mostra a identidade da plataforma (Grupo Apisul). Logos ficam no Storage, bucket `logos/<tenant_id>/` |
+| 14 | Admin da plataforma acessa só a Administração; portais de cliente exigem vínculo (Operador ou Cliente) |

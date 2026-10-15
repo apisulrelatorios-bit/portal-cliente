@@ -108,17 +108,18 @@
       .order("ordem").then(must);
   }
 
-  /* Junta tenants + vínculos: só os tenants que o usuário pode abrir, com o
-     papel dele em cada um. Admin da plataforma vê todos (o RLS libera). */
+  /* Junta tenants + vínculos: só os portais de cliente em que o usuário tem
+     vínculo, com o papel dele em cada um. O Admin da plataforma usa a
+     Administração e só entra num portal se também tiver vínculo com ele. */
   function combineTenants(profile, memberships, tenants) {
     var byTenant = {};
     memberships.forEach(function (m) { byTenant[m.tenant_id] = m; });
     return tenants
-      .filter(function (t) { return profile.is_platform_admin || byTenant[t.id]; })
+      .filter(function (t) { return byTenant[t.id]; })
       .map(function (t) {
         var m = byTenant[t.id];
-        t.papel = profile.is_platform_admin ? "admin" : m.papel;
-        t.pode_configurar = profile.is_platform_admin || Boolean(m && m.pode_configurar);
+        t.papel = m.papel;
+        t.pode_configurar = m.papel === "operador" && Boolean(m.pode_configurar);
         return t;
       });
   }

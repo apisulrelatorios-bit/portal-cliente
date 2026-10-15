@@ -105,7 +105,8 @@
       if (!session) return false;
       var profile = await window.PortalData.loadProfile(session.user.id);
       var tenants = await window.PortalData.listTenants(profile);
-      if (!tenants.length && profile.is_platform_admin) {
+      /* Admin da plataforma entra pela Administração. */
+      if (profile.is_platform_admin && !(forcePicker && tenants.length)) {
         window.location.href = "admin.html";
         return true;
       }

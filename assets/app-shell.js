@@ -420,6 +420,8 @@
     var cacheMostrado = null;
     var uidSalvo = uidLocal();
     var cache = uidSalvo && lerCache(uidSalvo);
+    /* Cache antigo de quando o Admin entrava nos portais: não mostra. */
+    if (cache && currentPage() !== "admin.html" && cache.perfil !== "operador" && cache.perfil !== "cliente") cache = null;
     if (cache) {
       try { renderChrome(cache); cacheMostrado = JSON.stringify(cache); } catch (_) {}
     }
@@ -443,9 +445,11 @@
       return null;
     }
     var isAdmin = Boolean(ctx.profile.is_platform_admin);
-    /* A Administração funciona mesmo sem cliente escolhido (ex.: nenhum tenant ainda). */
+    /* O Admin usa a Administração; portais de cliente exigem vínculo.
+       Sem cliente escolhido: Admin vai para a Administração, os demais
+       para o seletor de cliente. */
     if (!ctx.tenant && !(isAdmin && currentPage() === "admin.html")) {
-      window.location.replace(isAdmin && !ctx.tenants.length ? "admin.html" : "index.html?trocar=1");
+      window.location.replace(isAdmin ? "admin.html" : "index.html?trocar=1");
       return null;
     }
 
@@ -487,8 +491,8 @@
       photo: ctx.profile.foto_url || "",
       perfil: ctx.tenant ? ctx.tenant.papel : (isAdmin ? "admin" : ""),
       podeConfigurar: ctx.tenant ? ctx.tenant.pode_configurar : isAdmin,
-      /* Operador (e Admin dentro do cliente) libera acesso de usuários Cliente. */
-      podeGerenciarUsuarios: Boolean(ctx.tenant) && (isAdmin || ctx.tenant.papel === "operador"),
+      /* Operador libera acesso de usuários Cliente. */
+      podeGerenciarUsuarios: Boolean(ctx.tenant) && ctx.tenant.papel === "operador",
       tenant: ctx.tenant,
       tenants: ctx.tenants,
       modulos: ctx.modulos,

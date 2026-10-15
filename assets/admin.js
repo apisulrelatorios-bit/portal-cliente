@@ -145,7 +145,6 @@
         "</div>" +
         '<div class="admin-row-nums"><span><strong>' + t.usuarios + "</strong> usuário(s)</span><span><strong>" + t.itens + "</strong> conteúdo(s)</span></div>" +
         '<div class="admin-row-actions">' +
-          (t.ativo ? '<button type="button" class="admin-btn admin-btn--ghost" data-abrir="' + esc(t.id) + '">Abrir portal</button>' : "") +
           '<button type="button" class="admin-btn" data-editar-cliente="' + esc(t.id) + '">Editar</button>' +
         "</div></article>";
     }).join("");
@@ -492,11 +491,6 @@
       if (editar) {
         abrirDialogCliente(dados.tenants.filter(function (t) { return t.id === editar.getAttribute("data-editar-cliente"); })[0]);
         return;
-      }
-      var abrir = e.target.closest("[data-abrir]");
-      if (abrir) {
-        window.PortalData.setActiveTenantId(abrir.getAttribute("data-abrir"));
-        window.location.href = "dashboard.html";
       }
     });
 
