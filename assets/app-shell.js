@@ -73,7 +73,7 @@
 
   function moduleIcon(name) { return ICONES_MODULO[name] || ICONES_MODULO.grid; }
 
-  function moduleHref(slug) { return "modulo.html?m=" + encodeURIComponent(slug); }
+  function moduleHref(slug) { return "modulo.html?modulo=" + encodeURIComponent(slug); }
 
   /* Nome da página com ".html", mesmo quando o servidor usa URLs limpas (/modulo). */
   function currentPage() {
@@ -82,7 +82,8 @@
   }
 
   function currentModuleSlug() {
-    return new URLSearchParams(window.location.search).get("m") || "";
+    var params = new URLSearchParams(window.location.search);
+    return params.get("modulo") || params.get("m") || ""; /* "m" = endereço antigo */
   }
 
   function escapeAttr(value) {
@@ -229,7 +230,7 @@
   }
 
   function markActiveNav() {
-    var current = (currentPage() + (currentPage() === "modulo.html" ? "?m=" + encodeURIComponent(currentModuleSlug()) : "")).toLowerCase();
+    var current = (currentPage() + (currentPage() === "modulo.html" ? "?modulo=" + encodeURIComponent(currentModuleSlug()) : "")).toLowerCase();
     var links = document.querySelectorAll(".nav a");
     links.forEach(function (link) {
       var href = (link.getAttribute("href") || "").toLowerCase();

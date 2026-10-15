@@ -4,7 +4,7 @@
  * Os itens vêm do Supabase (assets/portal-data.js) já convertidos para os
  * nomes de campo do contrato antigo (Title, Categoria, Tema, TipoMidia...).
  *
- * modulo.html?m=<slug>: abas do módulo; cada aba mostra os itens da sua
+ * modulo.html?modulo=<slug>: abas do módulo; cada aba mostra os itens da sua
  * visão, agrupados pela coluna "agrupar_por" da visão (ex.: Tema).
  * gr.html / gl.html redirecionam para modulo.html.
  */

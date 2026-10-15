@@ -277,7 +277,7 @@ Ponto a decidir: o processo semiautomático de cadastro de itens que o Everton v
 |---|---|
 | **0 — Fundação** ✅ | Schema, RLS, validação de itens, template "Padrão Apisul", tenant Mondelez com os 14 itens (Storage ainda pendente) |
 | **1 — Login e shell** ✅ | Login com e-mail ou usuário, seletor de tenant, menu dinâmico (cores do tenant ainda pendentes) |
-| **2 — GR / GL no Supabase** ✅ | `modulo.html?m=<slug>`: abas → visão em cards, lendo de `itens`; gr.html/gl.html redirecionam |
+| **2 — GR / GL no Supabase** ✅ | `modulo.html?modulo=<slug>`: abas → visão em cards, lendo de `itens`; gr.html/gl.html redirecionam |
 | **3 — Operação** | CRUD de itens pelo operador, gestão de usuários Cliente |
 | **4 — Configuração do tenant** | Editor de listas, colunas, opções, módulos, abas, telas e cores |
 | **5 — Console Admin** | Tenants, templates, operadores |
